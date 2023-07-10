@@ -1346,7 +1346,7 @@ class DataContainer(torch.nn.Module):
             )
             hb_d[:, chunk, :] = temp_filtfilt
 
-        hb_d = hb_d[start_position:, ...]
+        # hb_d = hb_d[start_position:, ...]
         hb_d -= hb_d.mean(dim=0, keepdim=True)
 
         self.logger.info(f"{self.level3} apply bandpass acceptor_residuum (filtfilt)")
@@ -1363,7 +1363,7 @@ class DataContainer(torch.nn.Module):
             )
             hb_a[:, chunk, :] = temp_filtfilt
 
-        hb_a = hb_a[start_position:, ...]
+        # hb_a = hb_a[start_position:, ...]
         hb_a -= hb_a.mean(dim=0, keepdim=True)
 
         scale = (hb_a * hb_d).sum(dim=0) / (hb_a**2).sum(dim=0)
