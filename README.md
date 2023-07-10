@@ -25,7 +25,7 @@ We used a RTX 3090 as test GPU.
 
 ## Data processing chain
 
-### SVD (requires donor and acceptor time series)
+### SVD (requires donor and acceptor time series) remove_heartbeat: bool = True
 
 - start automatic_load
   - try to load previous mask
@@ -69,7 +69,7 @@ We used a RTX 3090 as test GPU.
   - update inital mask (optional)
 - end automatic_load
 
-### Classic (requires donor, acceptor, volume, and oxygenation time series)
+### Classic (requires donor, acceptor, volume, and oxygenation time series) remove_heartbeat: bool = False
 
 - start automatic_load
     - try to load previous mask
