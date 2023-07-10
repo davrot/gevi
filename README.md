@@ -1,5 +1,12 @@
 # gevi
 
+## Main files:
+
+Anime.py : Is a class used for displaying 2d Movies from a 3D Matrix.
+
+ImageAlignment.py: Is a class used for aligning two images (move and rotate as well as an unused scale option). This source code is based on https://github.com/matejak/imreg_dft . Is was ported to PyTorch such it can run in GPUs.
+
+DataContailer.py: Main class for data pre-processing of the gevi raw data.  
 
 ## TODO / Known problems
 
