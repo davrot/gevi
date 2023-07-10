@@ -5,7 +5,7 @@ from tqdm import trange
 
 # path: str = "/data_1/robert/2021-05-05/M3852M/raw"
 path: str = "/data_1/robert/2021-05-21/M3852M/raw"
-initital_mask_name: str | None = "mask.npy"
+initital_mask_name: str | None = None
 initital_mask_update: bool = True
 initital_mask_roi: bool = False  # default: True
 
@@ -15,7 +15,7 @@ start_position: int = 0
 start_position_coefficients: int = 100
 remove_heartbeat: bool = True  # i.e. use SVD
 bin_size: int = 4
-threshold: float | None = 0.05  # Between 0 and 1.0
+threshold: float | None = None  # Between 0 and 1.0
 
 
 display_logging_messages: bool = False
@@ -75,8 +75,11 @@ for trial_id in trange(0, len(list_of_trials)):
         result += result_temp
 
 assert result is not None
-assert mask is not None
+
 
 result /= n
 
-np.savez("result.npz", result=result.cpu(), mask=mask.cpu())
+np.save("result.npy", result.cpu())
+
+if mask is not None:
+    np.save("mask.npy", mask.cpu())
