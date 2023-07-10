@@ -28,15 +28,15 @@ We used a RTX 3090 as test GPU.
 ### SVD (requires donor and acceptor time series)
 
 - start automatic_load
-  - try to load previous mask: NOT found
+  - try to load previous mask
   - start cleaned_load_data
     - start load_data
     - work in XXXX.npy
       - np.load
-      - organize acceptor
-      - organize donor
-      - move axis
-      - move intra timeseries
+      - organize acceptor (to GPU memory)
+      - organize donor (to GPU memory)
+      - move axis (move the time axis of the tensor)
+      - move intra timeseries (donor time series and donor reference image & acceptor time series and acceptor reference image)
       - rotate inter timeseries
       - move inter timeseries
     - spatial pooling
@@ -57,17 +57,19 @@ We used a RTX 3090 as test GPU.
 ### Classic (requires donor, acceptor, volume, and oxygenation time series)
 
 - start automatic_load
-    - try to load previous mask: NOT found
+    - try to load previous mask
     - start cleaned_load_data
         - start load_data
             - work in XXXX.npy
             - np.load
-            - organize acceptor
-            - organize donor
-            - organize oxygenation
-            - organize volume
-            - move axis
+            - organize acceptor (to GPU memory)
+            - organize donor (to GPU memory)
+            - organize oxygenation (to GPU memory)
+            - organize volume (to GPU memory)
+            - move axis (move the time axis of the tensor)
             - move intra timeseries
+              - donor time series and donor reference image; also used on volume
+              - acceptor time series and acceptor reference image; also used on oxygenation)
             - rotate inter timeseries
             - move inter timeseries
         - spatial pooling
