@@ -29,31 +29,43 @@ We used a RTX 3090 as test GPU.
 
 - start automatic_load
   - try to load previous mask
-  - start cleaned_load_data
-    - start load_data
+  - start: cleaned_load_data
+    - start: load_data
     - work in XXXX.npy
       - np.load
-      - organize acceptor (to GPU memory)
-      - organize donor (to GPU memory)
+      - organize acceptor (move to GPU memory)
+      - organize donor (move to GPU memory)
       - move axis (move the time axis of the tensor)
       - move intra timeseries
         - donor time series and donor reference image
         - acceptor time series and acceptor reference image
       - rotate inter timeseries
+        - acceptor time series and donor reference image
       - move inter timeseries
-    - spatial pooling
+        - acceptor time series and donor reference image
+    - spatial pooling (i.e. 2d average pooling layer)
     - data(x,y,t) = data(x,y,t) / data(x,y,t).mean(t) + 1
-    - remove the heart beat via SVD
-    - remove mean
-    - remove linear trends
-  - remove heart beat (heartbeat_scale)
+    - remove the heart beat via SVD from donor and acceptor
+      - copy donor and acceptor and work on the copy with the SVD 
+      - remove the mean (over time)
+      - use Cholesky whitening on data with SVD
+      - scale the time series accoring the spatial whitening
+      - average time series over the spatial dimension (which is the global heart beat)
+      - use a normalized scalar product for get spatial scaling factors
+      - scale the heartbeat with the spatial scaling factors into donor_residuum and acceptor_residuum
+      - store the heartbeat as well as substract it from the original donor and acceptor timeseries
+    - remove mean from donor and acceptor timeseries
+    - remove linear trends from donor and acceptor timeseries
+  - use the SVD heart beat for determining the scaling factors for donor and acceptor (heartbeat_scale)
     - apply bandpass donor_residuum (filtfilt)
     - apply bandpass acceptor_residuum (filtfilt)
-    - calculate mask (optinal)
-  - don't use regression
-  - scale acceptor signal (result_a(x,y,t)) and donor signal (result_d(x,y,t))
+    - a normalized scalar product is used to determine the scale factor scale(x,y) from donor_residuum(x,y,t) and acceptor_residuum(x,y,t)
+    - calculate mask (optional) ; based on the heart beat power at the spatial positions
+  - scale acceptor signal (heartbeat_scale_a(x,y) * result_a(x,y,t)) and donor signal (heartbeat_scale_d(x,y) * result_d(x,y,t))
+    - heartbeat_scale_a = torch.sqrt(scale)
+    - heartbeat_scale_d = 1.0 / (heartbeat_scale_a + 1e-20)
   - result(x,y,t) = 1.0 + result_a(x,y,t) - result_d(x,y,t)
-  - update inital mask
+  - update inital mask (optional)
 - end automatic_load
 
 ### Classic (requires donor, acceptor, volume, and oxygenation time series)
@@ -64,23 +76,29 @@ We used a RTX 3090 as test GPU.
         - start load_data
             - work in XXXX.npy
             - np.load
-            - organize acceptor (to GPU memory)
-            - organize donor (to GPU memory)
-            - organize oxygenation (to GPU memory)
-            - organize volume (to GPU memory)
+            - organize acceptor (move to GPU memory)
+            - organize donor (move to GPU memory)
+            - organize oxygenation (move to GPU memory)
+            - organize volume (move to GPU memory)
             - move axis (move the time axis of the tensor)
             - move intra timeseries
               - donor time series and donor reference image; transformation also used on volume
               - acceptor time series and acceptor reference image; transformation also used on oxygenation
             - rotate inter timeseries
+              - acceptor time series and donor reference image; transformation also used on volume
             - move inter timeseries
-        - spatial pooling
+            - acceptor time series and donor reference image; transformation also used on volume
+        - spatial pooling (i.e. 2d average pooling layer)
         - data(x,y,t) = data(x,y,t) / data(x,y,t).mean(t) + 1
         - frame shift
-    - measure heart rate (measure_heartbeat_frequency)
-    - use "regression" (i.e. iterative non-orthogonal basis decomposition)
+          - the first frame of donor and acceptor time series is dropped
+          - the oxygenation and volume time series are interpolated between two frames (to compensate for the 5ms delay)
+    - measure heart rate (measure_heartbeat_frequency) i.e. find the frequency with the highest power in the frequency band
+    - use "regression" (i.e. iterative non-orthogonal basis decomposition); remove offset, linear trend, oxygenation and volume timeseries
     - donor: measure heart beat spectral power (measure_heartbeat_power)
     - acceptor: measure heart beat spectral power (measure_heartbeat_power)
-    - scale acceptor and donor signals
+    - scale acceptor and donor signals via the powers
+      - heartbeat_scale_a = torch.sqrt(scale)
+      - heartbeat_scale_d = 1.0 / (heartbeat_scale_a + 1e-20)
     - result(x,y,t) = 1.0 + result_a(x,y,t) - result_d(x,y,t)
 - end automatic_load
