@@ -45,7 +45,7 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
         - acceptor time series and donor reference image
       - move inter timeseries
         - acceptor time series and donor reference image
-    - spatial pooling (i.e. 2d average pooling layer)
+    - spatial pooling (i.e. 2d average pooling layer; optional)
         - acceptor(x,y,t) = acceptor(x,y,t) / acceptor(x,y,t).mean(t) + 1
         - donor(x,y,t) = donor(x,y,t) / donor(x,y,t).mean(t) + 1
     - remove the heart beat via SVD from donor and acceptor
@@ -68,6 +68,8 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
     - heartbeat_scale_a = torch.sqrt(scale)
     - heartbeat_scale_d = 1.0 / (heartbeat_scale_a + 1e-20)
   - result(x,y,t) = 1.0 + result_a(x,y,t) - result_d(x,y,t)
+  - gauss blur (optional)
+  - spatial binning (optional)
   - update inital mask (optional)
 - end automatic_load
 
@@ -91,7 +93,7 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
               - acceptor time series and donor reference image; transformation also used on volume
             - move inter timeseries
               - acceptor time series and donor reference image; transformation also used on volume
-        - spatial pooling (i.e. 2d average pooling layer)
+        - spatial pooling (i.e. 2d average pooling layer; optional)
         - acceptor(x,y,t) = acceptor(x,y,t) / acceptor(x,y,t).mean(t) + 1
         - donor(x,y,t) = donor(x,y,t) / donor(x,y,t).mean(t) + 1
         - oxygenation(x,y,t) = oxygenation(x,y,t) / oxygenation(x,y,t).mean(t) + 1
@@ -108,6 +110,8 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
       - heartbeat_scale_a = torch.sqrt(scale)
       - heartbeat_scale_d = 1.0 / (heartbeat_scale_a + 1e-20)
     - result(x,y,t) = 1.0 + result_a(x,y,t) - result_d(x,y,t)
+    - gauss blur (optional)
+    - spatial binning (optional)
 - end automatic_load
 
 ## DataContailer.py
@@ -116,42 +120,41 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
 
     def __init__(
         self,
-        path: str,
-        device: torch.device,
-        display_logging_messages: bool = False,
-        save_logging_messages: bool = False,
+        path: str, # Path to the raw data
+        device: torch.device, # e.g. torch.device("cpu") or torch.device("cuda:0")
+        display_logging_messages: bool = False, # displays log messages on screen
+        save_logging_messages: bool = False, # writes log messages into a log file
     ) -> None:
 
 ### automatic_load
     def automatic_load(  
         self,
-        experiment_id: int = 1,
-        trial_id: int = 1,
-        start_position: int = 0,
-        start_position_coefficients: int = 100,
-        fs: float = 100.0,
-        use_regression: bool | None = False,
+        experiment_id: int = 1, # number of experiment
+        trial_id: int = 1, # number of the trial
+        start_position: int = 0, # number of frames cut away from the beginning of the time series
+        start_position_coefficients: int = 100, # number of frames ignored for calculating scaling factors and such
+        fs: float = 100.0, # sampling rate in Hz
+        use_regression: bool | None = None,
         # Heartbeat
         remove_heartbeat: bool = True,  # i.e. use SVD
         low_frequency: float = 5,  # Hz Butter Bandpass Heartbeat
         high_frequency: float = 15,  # Hz Butter Bandpass Heartbeat
         threshold: float | None = 0.5,  # For the mask
         # Extra exposed parameters:
-        align: bool = True,
+        align: bool = True, # align the time series after loading them 
         iterations: int = 1,  # SVD iterations: Do not touch! Keep at 1
-        lowrank_method: bool = True,
-        lowrank_q: int = 6,
-        remove_heartbeat_mean: bool = False,
-        remove_heartbeat_linear: bool = False,
-        bin_size: int = 4,
+        lowrank_method: bool = True, # saves computational time if we know that we don't need all SVD values
+        lowrank_q: int = 6, # parameter for the low rank method. need to be at least 2-3x larger than the number of SVD values we want
+        remove_heartbeat_mean: bool = False, # allows us to remove a offset from the SVD heart signals (don't need that because of a bandpass filter)
+        remove_heartbeat_linear: bool = False, # allows us to remove a linear treand from the SVD heart signals (don't need that because of a bandpass filter)
+        bin_size: int = 4, # size of the kernel of the first 2d average pooling layer 
         do_frame_shift: bool = True,
         half_width_frequency_window: float = 3.0,  # Hz (on side ) measure_heartbeat_frequency
-        mmap_mode: bool = True,
+        mmap_mode: bool = True, # controls the np.load 
         initital_mask_name: str | None = None,
         initital_mask_update: bool = True,
         initital_mask_roi: bool = False,
         gaussian_blur_kernel_size: int | None = 3,
         gaussian_blur_sigma: float = 1.0,
-        bin_size_post: int | None = None,
-        calculate_amplitude: bool = False,
+        bin_size_post: int | None = None, # size of the kernel of the second 2d average pooling layer 
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
