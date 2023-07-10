@@ -11,7 +11,7 @@ class Anime:
     def show(
         self,
         input: torch.Tensor | np.ndarray,
-        mask: torch.Tensor | np.ndarray | None,
+        mask: torch.Tensor | np.ndarray | None = None,
         vmin: float | None = None,
         vmax: float | None = None,
         cmap: str = "hot",
@@ -60,10 +60,10 @@ class Anime:
             vmax=vmax,
         )
 
-        if colorbar is True:
+        if colorbar:
             plt.colorbar()
 
-        if axis_off is True:
+        if axis_off:
             plt.axis("off")
 
         def next_frame(i: int) -> None:
@@ -72,7 +72,7 @@ class Anime:
                 image[mask_np] = float("NaN")
 
             image_handle.set_data(image)
-            if show_frame_count is True:
+            if show_frame_count:
                 bar_length: int = 10
                 filled_length = int(round(bar_length * i / input_np.shape[0]))
                 bar = "\u25A0" * filled_length + "\u25A1" * (bar_length - filled_length)

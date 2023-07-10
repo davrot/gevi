@@ -762,7 +762,7 @@ class ImageAlignment(torch.nn.Module):
         bgval: torch.Tensor | None = None,
         invert=False,
     ) -> torch.Tensor:
-        if invert is True:
+        if invert:
             if scale is not None:
                 scale = 1.0 / scale
             if angle is not None:
@@ -927,7 +927,7 @@ class ImageAlignment(torch.nn.Module):
             if succ2[pos] > succ[pos]:
                 pick_rotated = True
 
-            if pick_rotated is True:
+            if pick_rotated:
                 tvec[pos, :] = tvec2[pos, :]
                 succ[pos] = succ2[pos]
                 angle[pos] += 180
