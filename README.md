@@ -151,10 +151,10 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
         do_frame_shift: bool = True,
         half_width_frequency_window: float = 3.0,  # Hz (on side ) measure_heartbeat_frequency
         mmap_mode: bool = True, # controls the np.load 
-        initital_mask_name: str | None = None,
-        initital_mask_update: bool = True,
-        initital_mask_roi: bool = False,
-        gaussian_blur_kernel_size: int | None = 3,
-        gaussian_blur_sigma: float = 1.0,
+        initital_mask_name: str | None = None, # allows to store the map into a file (give filename here or None if you don't want to save it)
+        initital_mask_update: bool = True, # the mask is updated with new information from this trial
+        initital_mask_roi: bool = False, # enables a tool to refine the automatic map
+        gaussian_blur_kernel_size: int | None = 3, # parameter of a gauss blur layer: kernel_size
+        gaussian_blur_sigma: float = 1.0, # parameter of a gauss blur layer: sigma
         bin_size_post: int | None = None, # size of the kernel of the second 2d average pooling layer 
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
