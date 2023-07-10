@@ -109,3 +109,49 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
       - heartbeat_scale_d = 1.0 / (heartbeat_scale_a + 1e-20)
     - result(x,y,t) = 1.0 + result_a(x,y,t) - result_d(x,y,t)
 - end automatic_load
+
+## DataContailer.py
+
+### Constructor
+
+    def __init__(
+        self,
+        path: str,
+        device: torch.device,
+        display_logging_messages: bool = False,
+        save_logging_messages: bool = False,
+    ) -> None:
+
+### automatic_load
+    def automatic_load(  
+        self,
+        experiment_id: int = 1,
+        trial_id: int = 1,
+        start_position: int = 0,
+        start_position_coefficients: int = 100,
+        fs: float = 100.0,
+        use_regression: bool | None = False,
+        # Heartbeat
+        remove_heartbeat: bool = True,  # i.e. use SVD
+        low_frequency: float = 5,  # Hz Butter Bandpass Heartbeat
+        high_frequency: float = 15,  # Hz Butter Bandpass Heartbeat
+        threshold: float | None = 0.5,  # For the mask
+        # Extra exposed parameters:
+        align: bool = True,
+        iterations: int = 1,  # SVD iterations: Do not touch! Keep at 1
+        lowrank_method: bool = True,
+        lowrank_q: int = 6,
+        remove_heartbeat_mean: bool = False,
+        remove_heartbeat_linear: bool = False,
+        bin_size: int = 4,
+        do_frame_shift: bool = True,
+        half_width_frequency_window: float = 3.0,  # Hz (on side ) measure_heartbeat_frequency
+        mmap_mode: bool = True,
+        initital_mask_name: str | None = None,
+        initital_mask_update: bool = True,
+        initital_mask_roi: bool = False,
+        gaussian_blur_kernel_size: int | None = 3,
+        gaussian_blur_sigma: float = 1.0,
+        bin_size_post: int | None = None,
+        calculate_amplitude: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
