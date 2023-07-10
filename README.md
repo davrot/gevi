@@ -40,7 +40,7 @@ We used a RTX 3090 as test GPU.
       - rotate inter timeseries
       - move inter timeseries
     - spatial pooling
-    - data(x,y,t) -= data(x,y,t).mean(t) + 1
+    - data(x,y,t) = data(x,y,t) / data(x,y,t).mean(t) + 1
     - remove the heart beat via SVD
     - remove mean
     - remove linear trends
@@ -49,7 +49,8 @@ We used a RTX 3090 as test GPU.
     - apply bandpass acceptor_residuum (filtfilt)
     - calculate mask (optinal)
   - don't use regression
-  - scale acceptor and donor signals
+  - scale acceptor signal (result_a(x,y,t)) and donor signal (result_d(x,y,t))
+  - result(x,y,t) = 1.0 + result_a(x,y,t) - result_d(x,y,t)
   - update inital mask
 - end automatic_load
 
