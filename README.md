@@ -21,3 +21,35 @@ numpy scipy pandas flake8 pep8-naming black matplotlib seaborn ipython jupyterla
 Not all packages are necessary (probably these are enougth: torch torchaudio torchvision roipoly natsort numpy matplotlib) but this is our default in-house installation plus roipoly. 
 
 We used a RTX 3090 as test GPU. 
+
+
+## Data processing chain
+
+### SVD
+
+- start automatic_load
+  - try to load previous mask: NOT found
+  - start cleaned_load_data
+    - start load_data
+    - work in XXXX.npy
+      - np.load
+      - organize acceptor
+      - organize donor
+      - move axis
+      - move intra timeseries
+      - rotate inter timeseries
+      - move inter timeseries
+    - spatial pooling
+    - data(x,y,t) -= data(x,y,t).mean(t) + 1
+    - remove the heart beat via SVD
+    - remove mean
+    - remove linear trends
+  - remove heart beat (heartbeat_scale)
+    - apply bandpass donor_residuum (filtfilt)
+    - apply bandpass acceptor_residuum (filtfilt)
+    - calculate mask (optinal)
+  - don't use regression
+  - scale acceptor and donor signals
+  - update inital mask
+- end automatic_load
+
