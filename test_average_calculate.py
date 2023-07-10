@@ -15,7 +15,7 @@ start_position: int = 0
 start_position_coefficients: int = 100
 remove_heartbeat: bool = True  # i.e. use SVD
 bin_size: int = 4
-threshold: float | None = None  # Between 0 and 1.0
+threshold: float | None = 0.1  # Between 0 and 1.0
 
 
 display_logging_messages: bool = False
@@ -50,10 +50,35 @@ print(f"Continue with experiment: {experiment_id}")
 list_of_trials = af.get_trials(experiment_id).cpu().numpy()
 print(f"The following trials have been found:\n {list_of_trials}")
 
+
+# mask
+_, mask = af.automatic_load(
+    experiment_id=experiment_id,
+    trial_id=int(list_of_trials[0]),
+    start_position=start_position,
+    remove_heartbeat=remove_heartbeat,  # i.e. use SVD
+    bin_size=bin_size,
+    initital_mask_name=initital_mask_name,
+    initital_mask_update=initital_mask_update,
+    initital_mask_roi=initital_mask_roi,
+    start_position_coefficients=start_position_coefficients,
+    gaussian_blur_kernel_size=gaussian_blur_kernel_size,
+    gaussian_blur_sigma=gaussian_blur_sigma,
+    bin_size_post=bin_size_post,
+    threshold=threshold,
+)
+
+if mask is not None:
+    np.save("mask.npy", mask.cpu())
+
+
+# data
 result: torch.Tensor | None = None
+count_not_nan: torch.Tensor | None = None
+
 n: float = 0
 for trial_id in trange(0, len(list_of_trials)):
-    result_temp, mask = af.automatic_load(
+    result_temp, _ = af.automatic_load(  # type: ignore
         experiment_id=experiment_id,
         trial_id=int(list_of_trials[trial_id]),
         start_position=start_position,
@@ -66,20 +91,23 @@ for trial_id in trange(0, len(list_of_trials)):
         gaussian_blur_kernel_size=gaussian_blur_kernel_size,
         gaussian_blur_sigma=gaussian_blur_sigma,
         bin_size_post=bin_size_post,
-        threshold=threshold,
+        threshold=None,
     )
     n += 1.0
     if result is None:
-        result = result_temp
+        result = (result_temp - 1.0).nan_to_num(nan=0.0)
+        count_not_nan = torch.isfinite(result_temp).type(torch.float32)
     else:
-        result += result_temp
+        result += (result_temp - 1.0).nan_to_num(nan=0.0)
+        count_not_nan += torch.isfinite(result_temp).type(torch.float32)
+
+    assert result is not None
+    if trial_id % 10 == 0:
+        np.save("result.npy", (result / count_not_nan).cpu())
+        np.save("count_not_nan.npy", (count_not_nan / n).cpu())
 
 assert result is not None
+assert count_not_nan is not None
 
-
-result /= n
-
-np.save("result.npy", result.cpu())
-
-if mask is not None:
-    np.save("mask.npy", mask.cpu())
+np.save("result.npy", (result / count_not_nan).cpu())
+np.save("count_not_nan.npy", (count_not_nan / n).cpu())
