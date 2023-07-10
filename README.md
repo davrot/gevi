@@ -25,7 +25,7 @@ We used a RTX 3090 as test GPU.
 
 ## Data processing chain
 
-### SVD
+### SVD (requires donor and acceptor time series)
 
 - start automatic_load
   - try to load previous mask: NOT found
@@ -54,7 +54,7 @@ We used a RTX 3090 as test GPU.
   - update inital mask
 - end automatic_load
 
-### Classic
+### Classic (requires donor, acceptor, volume, and oxygenation time series)
 
 - start automatic_load
     - try to load previous mask: NOT found
