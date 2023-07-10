@@ -15,7 +15,7 @@ start_position: int = 0
 start_position_coefficients: int = 100
 remove_heartbeat: bool = True  # i.e. use SVD
 bin_size: int = 4
-threshold: float | None = 0.1  # Between 0 and 1.0
+threshold: float | None = 0.05  # Between 0 and 1.0
 
 
 display_logging_messages: bool = False

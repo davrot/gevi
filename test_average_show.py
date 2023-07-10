@@ -10,9 +10,15 @@ example_position_y: int = 440
 bin_size: int = 4
 bin_size_post: int | None = None
 
-data = np.load("result.npz")
-result = data["result"]
-mask = data["mask"]
+result = np.load("result.npy")
+mask = np.load("mask.npy")
+count_not_nan = np.load("count_not_nan.npy")
+
+# plt.imshow(count_not_nan.mean(axis=0))
+# plt.colorbar()
+# plt.title("Not nan")
+# plt.show()
+# exit()
 
 example_position_x = example_position_x // bin_size
 example_position_y = example_position_y // bin_size
@@ -26,6 +32,4 @@ if show_example_timeseries:
 
 if play_movie:
     ani = Anime()
-    ani.show(
-        result - 1.0, mask=mask, vmin_scale=0.5, vmax_scale=0.5
-    )  # , vmin=0.98)  # , vmin=1.0, vmax_scale=1.0)
+    ani.show(result, mask=mask, vmin_scale=0.01, vmax_scale=0.01)
