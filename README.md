@@ -134,13 +134,11 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
         start_position: int = 0, # number of frames cut away from the beginning of the time series
         start_position_coefficients: int = 100, # number of frames ignored for calculating scaling factors and such
         fs: float = 100.0, # sampling rate in Hz
-        use_regression: bool | None = None,
-        # Heartbeat
-        remove_heartbeat: bool = True,  # i.e. use SVD
+        use_regression: bool | None = None, # controls the "regression"; None is automatic mode. Needs all four time series!
+        remove_heartbeat: bool = True,  # i.e. use SVD=True or Classic=False
         low_frequency: float = 5,  # Hz Butter Bandpass Heartbeat
         high_frequency: float = 15,  # Hz Butter Bandpass Heartbeat
-        threshold: float | None = 0.5,  # For the mask
-        # Extra exposed parameters:
+        threshold: float | None = 0.5,  # threshold for the mask; None is no mask. valid values are between 0.0 and 1.0.
         align: bool = True, # align the time series after loading them 
         iterations: int = 1,  # SVD iterations: Do not touch! Keep at 1
         lowrank_method: bool = True, # saves computational time if we know that we don't need all SVD values
@@ -148,7 +146,7 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
         remove_heartbeat_mean: bool = False, # allows us to remove a offset from the SVD heart signals (don't need that because of a bandpass filter)
         remove_heartbeat_linear: bool = False, # allows us to remove a linear treand from the SVD heart signals (don't need that because of a bandpass filter)
         bin_size: int = 4, # size of the kernel of the first 2d average pooling layer 
-        do_frame_shift: bool = True,
+        do_frame_shift: bool = True, # Do the frame shift or not. 
         half_width_frequency_window: float = 3.0,  # Hz (on side ) measure_heartbeat_frequency
         mmap_mode: bool = True, # controls the np.load 
         initital_mask_name: str | None = None, # allows to store the map into a file (give filename here or None if you don't want to save it)
