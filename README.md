@@ -36,7 +36,9 @@ We used a RTX 3090 as test GPU.
       - organize acceptor (to GPU memory)
       - organize donor (to GPU memory)
       - move axis (move the time axis of the tensor)
-      - move intra timeseries (donor time series and donor reference image & acceptor time series and acceptor reference image)
+      - move intra timeseries
+        - donor time series and donor reference image
+        - acceptor time series and acceptor reference image
       - rotate inter timeseries
       - move inter timeseries
     - spatial pooling
@@ -68,8 +70,8 @@ We used a RTX 3090 as test GPU.
             - organize volume (to GPU memory)
             - move axis (move the time axis of the tensor)
             - move intra timeseries
-              - donor time series and donor reference image; also used on volume
-              - acceptor time series and acceptor reference image; also used on oxygenation)
+              - donor time series and donor reference image; transformation also used on volume
+              - acceptor time series and acceptor reference image; transformation also used on oxygenation
             - rotate inter timeseries
             - move inter timeseries
         - spatial pooling
