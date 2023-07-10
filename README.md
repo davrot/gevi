@@ -22,6 +22,8 @@ Not all packages are necessary (probably these are enougth: torch torchaudio tor
 
 We used a RTX 3090 as test GPU. 
 
+For installing torch under Windows see here: https://pytorch.org/get-started/locally/ 
+
 
 ## Data processing chain
 
