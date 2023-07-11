@@ -146,7 +146,7 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
         remove_heartbeat_mean: bool = False, # allows us to remove a offset from the SVD heart signals (don't need that because of a bandpass filter)
         remove_heartbeat_linear: bool = False, # allows us to remove a linear treand from the SVD heart signals (don't need that because of a bandpass filter)
         bin_size: int = 4, # size of the kernel of the first 2d average pooling layer 
-        do_frame_shift: bool = True, # Do the frame shift or not. 
+        do_frame_shift: bool | None = None, # Do the frame shift or not. None = automatic mode. 
         half_width_frequency_window: float = 3.0,  # Hz (on side ) measure_heartbeat_frequency
         mmap_mode: bool = True, # controls the np.load 
         initital_mask_name: str | None = None, # allows to store the map into a file (give filename here or None if you don't want to save it)
@@ -156,3 +156,5 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
         gaussian_blur_sigma: float = 1.0, # parameter of a gauss blur layer: sigma
         bin_size_post: int | None = None, # size of the kernel of the second 2d average pooling layer 
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
+
+    This functions outputs the result(x,y,t) and mask(x,y), while the latter can be None.  
