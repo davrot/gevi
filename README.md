@@ -158,3 +158,16 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
 
     This functions outputs the result(x,y,t) and mask(x,y), while the latter can be None.  
+
+### get_experiments
+        def get_experiments(
+        self,
+    ) -> torch.Tensor:
+
+Gives a list of available experiments in the path given to the constructor  
+
+### get_trials
+
+    def get_trials(self, experiment_id: int) -> torch.Tensor:
+
+Gives a list of available trials for this experiment in the path given to the constructor
