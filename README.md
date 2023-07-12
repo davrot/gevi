@@ -114,7 +114,7 @@ For installing torch under Windows see here: https://pytorch.org/get-started/loc
     - spatial binning (optional)
 - end automatic_load
 
-## DataContailer.py
+## DataContainer.py
 
 ### Constructor
 
