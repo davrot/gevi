@@ -1,5 +1,5 @@
 import torch
-from DataContainer import DataContainer
+from functions.DataContainer import DataContainer
 import numpy as np
 from tqdm import trange
 
