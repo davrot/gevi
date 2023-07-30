@@ -1,4 +1,4 @@
-from Anime import Anime
+from functions.Anime import Anime
 import matplotlib.pyplot as plt
 import numpy as np
 
