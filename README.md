@@ -8,10 +8,6 @@ ImageAlignment.py: Is a class used for aligning two images (move and rotate as w
 
 DataContailer.py: Main class for data pre-processing of the gevi raw data.  
 
-## TODO / Known problems
-
-Support for several part files was included but, due to missing data with several part files, never tested. 
-
 ## Installation 
 
 The code was tested on a Python 3.11.2 (Linux) with the following pip packages installed:
