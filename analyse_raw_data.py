@@ -8,18 +8,19 @@ import os
 
 
 def main(
-    path: str = "/data_1/hendrik/2023-07-17/M_Sert_Cre_41/raw",
+    path: str = "/data_1/hendrik/2021-06-17/M3859M/raw",
     experiment_id: int = 1,
     trial_id: int = 1,
     use_svd: bool = True,  # i.e. use SVD
-    mask_threshold: float | None = 0.05,  # Between 0 and 1.0
+    mask_threshold: float | None = 0.0025,  # Between 0 and 1.0
     show_example_timeseries: bool = True,
     example_position_x: int = 280,
     example_position_y: int = 440,
-    movie_play: bool = False,
-    movie_vmin_scale: float = 0.5,
-    movie_vmax_scale: float = 0.5,
-    movie_enable_mask: bool = False,
+    movie_play: bool = True,
+    movie_vmin_scale: float | None = 0.05,
+    movie_vmax_scale: float | None = 0.1,
+    movie_enable_mask: bool = True,
+    movie_export: bool = False,
     export_results: bool = True,
     export_path: str = "Export",
 ):
@@ -27,6 +28,14 @@ def main(
         print("SVD mode")
     else:
         print("Classic mode")
+
+    if movie_export is False:
+        movie_file: str | None = None
+    else:
+        if use_svd:
+            movie_file = f"SVD_Exp{experiment_id}_Trial{trial_id}.mp4"
+        else:
+            movie_file = f"Classic_Exp{experiment_id}_Trial{trial_id}.mp4"
 
     if export_results:
         os.makedirs(export_path, exist_ok=True)
@@ -126,10 +135,14 @@ def main(
                 mask=mask,
                 vmin_scale=movie_vmin_scale,
                 vmax_scale=movie_vmax_scale,
+                movie_file=movie_file,
             )
         else:
             ani.show(
-                result - 1.0, vmin_scale=movie_vmin_scale, vmax_scale=movie_vmax_scale
+                result - 1.0,
+                vmin_scale=movie_vmin_scale,
+                vmax_scale=movie_vmax_scale,
+                movie_file=movie_file,
             )
 
 

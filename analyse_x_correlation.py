@@ -196,7 +196,7 @@ def make_a_x_correlation_plot(
 
 @torch.no_grad()
 def main(
-    path: str = "/data_1/hendrik/2023-07-17/M_Sert_Cre_41/raw",
+    path: str = "/data_1/hendrik/2021-06-17/M3859M/raw",
     use_svd: bool = True,
     remove_linear_trend: bool = False,
     experiment_id: int = 1,
