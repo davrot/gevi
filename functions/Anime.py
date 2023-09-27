@@ -22,6 +22,7 @@ class Anime:
         colorbar: bool = True,
         vmin_scale: float | None = None,
         vmax_scale: float | None = None,
+        movie_file: str | None = None,
     ) -> None:
         assert input.ndim == 3
 
@@ -79,12 +80,14 @@ class Anime:
                 plt.title(f"{bar} {i} of {int(input_np.shape[0]-1)}", loc="left")
             return
 
-        _ = matplotlib.animation.FuncAnimation(
+        ani = matplotlib.animation.FuncAnimation(
             fig,
             next_frame,
             frames=int(input.shape[0]),
             interval=interval,
             repeat=repeat,
         )
-
-        plt.show()
+        if movie_file is not None:
+            ani.save(movie_file)
+        else:
+            plt.show()

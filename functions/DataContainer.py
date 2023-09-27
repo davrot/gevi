@@ -232,10 +232,12 @@ class DataContainer(torch.nn.Module):
 
             else:
                 assert self.acceptor is not None
-                assert self.acceptor.ndim == temp.ndim
+                assert self.acceptor.ndim + 1 == temp.ndim
                 assert self.acceptor.shape[0] == temp.shape[0]
                 assert self.acceptor.shape[1] == temp.shape[1]
-                assert self.acceptor.shape[3] == temp.shape[3]
+                # assert self.acceptor.shape[2] == temp.shape[2]
+                assert temp.shape[3] == 4
+
                 self.acceptor = torch.cat(
                     (
                         self.acceptor,
@@ -258,10 +260,12 @@ class DataContainer(torch.nn.Module):
 
             else:
                 assert self.donor is not None
-                assert self.donor.ndim == temp.ndim
+                assert self.donor.ndim + 1 == temp.ndim
                 assert self.donor.shape[0] == temp.shape[0]
                 assert self.donor.shape[1] == temp.shape[1]
-                assert self.donor.shape[3] == temp.shape[3]
+                # assert self.donor.shape[2] == temp.shape[2]
+                assert temp.shape[3] == 4
+
                 self.donor = torch.cat(
                     (
                         self.donor,
@@ -284,10 +288,12 @@ class DataContainer(torch.nn.Module):
                     )
                 else:
                     assert self.oxygenation is not None
-                    assert self.oxygenation.ndim == temp.ndim
+                    assert self.oxygenation.ndim + 1 == temp.ndim
                     assert self.oxygenation.shape[0] == temp.shape[0]
                     assert self.oxygenation.shape[1] == temp.shape[1]
-                    assert self.oxygenation.shape[3] == temp.shape[3]
+                    # assert self.oxygenation.shape[2] == temp.shape[2]
+                    assert temp.shape[3] == 4
+
                     self.oxygenation = torch.cat(
                         (
                             self.oxygenation,
@@ -311,10 +317,12 @@ class DataContainer(torch.nn.Module):
                     )
                 else:
                     assert self.volume is not None
-                    assert self.volume.ndim == temp.ndim
+                    assert self.volume.ndim + 1 == temp.ndim
                     assert self.volume.shape[0] == temp.shape[0]
                     assert self.volume.shape[1] == temp.shape[1]
-                    assert self.volume.shape[3] == temp.shape[3]
+                    # assert self.volume.shape[2] == temp.shape[2]
+                    assert temp.shape[3] == 4
+
                     self.volume = torch.cat(
                         (
                             self.volume,
