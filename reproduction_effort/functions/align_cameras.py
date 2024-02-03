@@ -19,7 +19,14 @@ def align_cameras(
     batch_size: int,
     fill_value: float = 0,
 ) -> tuple[
-    torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
 ]:
     image_alignment = ImageAlignment(default_dtype=dtype, device=device)
 
@@ -172,4 +179,13 @@ def align_cameras(
         )
     )
 
-    return acceptor, donor, oxygenation, volume, angle_donor_volume, tvec_donor_volume
+    return (
+        acceptor,
+        donor,
+        oxygenation,
+        volume,
+        angle_donor_volume,
+        tvec_donor_volume,
+        angle_refref,
+        tvec_refref,
+    )
