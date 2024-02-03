@@ -12,7 +12,7 @@ def align_refref(
     ref_image_donor: torch.Tensor,
     image_alignment: ImageAlignment,
     batch_size: int,
-    fill_value: int = 0,
+    fill_value: float = 0,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
     angle_refref = calculate_rotation(
