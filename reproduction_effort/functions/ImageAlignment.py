@@ -310,12 +310,14 @@ class ImageAlignment(torch.nn.Module):
             (array.shape[0], array.shape[1] * array.shape[2])
         ).argmax(dim=1)
         pos_0 = max_pos // array.shape[2]
+
         max_pos -= pos_0 * array.shape[2]
         ret = torch.zeros(
             (array.shape[0], 2), dtype=self.default_dtype, device=self.device
         )
         ret[:, 0] = pos_0
         ret[:, 1] = max_pos
+
         return ret.type(dtype=torch.int64)
 
     def _apodize(self, what: torch.Tensor) -> torch.Tensor:
@@ -666,6 +668,7 @@ class ImageAlignment(torch.nn.Module):
         array *= mask2
 
         tvec = self._argmax_ext(array, "inf")
+
         tvec = self._interpolate(array_orig, tvec)
 
         success = self._get_success(array_orig, tvec, 2)
@@ -793,7 +796,8 @@ class ImageAlignment(torch.nn.Module):
                 / (
                     torch.abs(image_reference_fft) * torch.abs(images_todo_fft)
                     + eps.unsqueeze(-1).unsqueeze(-1)
-                )
+                ),
+                dim=(-2, -1),
             )
         )
 
@@ -813,6 +817,7 @@ class ImageAlignment(torch.nn.Module):
         ret, succ = self._phase_correlation(
             im0.unsqueeze(0), im1, self.argmax_translation
         )
+
         return ret, succ
 
     def _get_ang_scale(

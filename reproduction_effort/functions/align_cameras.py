@@ -61,12 +61,12 @@ def align_cameras(
     # --- Calculate translation and rotation between the reference images ---
     angle_refref, tvec_refref, ref_image_acceptor, ref_image_donor = align_refref(
         ref_image_acceptor=acceptor[
-            acceptor.shape[2] // 2,
+            acceptor.shape[0] // 2,
             :,
             :,
         ],
         ref_image_donor=donor[
-            donor.shape[2] // 2,
+            donor.shape[0] // 2,
             :,
             :,
         ],
@@ -77,7 +77,7 @@ def align_cameras(
 
     ref_image_oxygenation = tv.transforms.functional.affine(
         img=oxygenation[
-            oxygenation.shape[2] // 2,
+            oxygenation.shape[0] // 2,
             :,
             :,
         ].unsqueeze(0),
@@ -102,7 +102,7 @@ def align_cameras(
     ref_image_oxygenation = ref_image_oxygenation.squeeze(0)
 
     ref_image_volume = volume[
-        volume.shape[2] // 2,
+        volume.shape[0] // 2,
         :,
         :,
     ].clone()

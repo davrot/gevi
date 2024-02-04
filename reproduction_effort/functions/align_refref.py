@@ -16,9 +16,9 @@ def align_refref(
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
     angle_refref = calculate_rotation(
-        image_alignment,
-        ref_image_acceptor.unsqueeze(0),
-        ref_image_donor,
+        image_alignment=image_alignment,
+        input=ref_image_acceptor.unsqueeze(0),
+        reference_image=ref_image_donor,
         batch_size=batch_size,
     )
 
@@ -33,9 +33,9 @@ def align_refref(
     )
 
     tvec_refref = calculate_translation(
-        image_alignment,
-        ref_image_acceptor,
-        ref_image_donor,
+        image_alignment=image_alignment,
+        input=ref_image_acceptor,
+        reference_image=ref_image_donor,
         batch_size=batch_size,
     )
 
@@ -49,8 +49,6 @@ def align_refref(
         shear=0,
         interpolation=tv.transforms.InterpolationMode.BILINEAR,
         fill=fill_value,
-    )
-
-    ref_image_acceptor = ref_image_acceptor.squeeze(0)
+    ).squeeze(0)
 
     return angle_refref, tvec_refref, ref_image_acceptor, ref_image_donor
