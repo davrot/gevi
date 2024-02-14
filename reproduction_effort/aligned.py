@@ -2,6 +2,7 @@ import scipy.io as sio  # type: ignore
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 from functions.align_cameras import align_cameras
 
@@ -16,10 +17,22 @@ if __name__ == "__main__":
     dtype: torch.dtype = torch.float32
 
     filename_raw_json: str = "raw/Exp001_Trial001_Part001_meta.txt"
-    filename_bin_mat: str = "bin_old/Exp001_Trial001_Part001.mat"
+    filename_data_binning_replace: str = "bin_old/Exp001_Trial001_Part001.mat"
     batch_size: int = 200
 
     filename_aligned_mat: str = "aligned_old/Exp001_Trial001_Part001.mat"
+
+    with open(filename_raw_json, "r") as file_handle:
+        metadata: dict = json.load(file_handle)
+    channels: list[str] = metadata["channelKey"]
+
+    data = torch.tensor(
+        sio.loadmat(filename_data_binning_replace)["nparray"].astype(np.float32),
+        dtype=dtype,
+        device=device,
+    )
+
+    ref_image = data[:, :, data.shape[-2] // 2, :].clone()
 
     (
         acceptor,
@@ -31,13 +44,15 @@ if __name__ == "__main__":
         angle_refref,
         tvec_refref,
     ) = align_cameras(
-        filename_raw_json=filename_raw_json,
-        filename_bin_mat=filename_bin_mat,
+        channels=channels,
+        data=data,
+        ref_image=ref_image,
         device=device,
         dtype=dtype,
         batch_size=batch_size,
         fill_value=-1,
     )
+    del data
 
     mat_data = torch.tensor(
         sio.loadmat(filename_aligned_mat)["data"].astype(dtype=np.float32),

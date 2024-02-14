@@ -3,6 +3,7 @@ import torchvision as tv  # type: ignore
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io as sio  # type: ignore
+import json
 
 from functions.align_cameras import align_cameras
 
@@ -143,6 +144,19 @@ sio.savemat(filename_bin_mat_fake, mdic)
 batch_size: int = 200
 filename_raw_json: str = "raw/Exp001_Trial001_Part001_meta.txt"
 
+with open(filename_raw_json, "r") as file_handle:
+    metadata: dict = json.load(file_handle)
+channels: list[str] = metadata["channelKey"]
+
+
+data = torch.tensor(
+    sio.loadmat(filename_bin_mat_fake)["nparray"].astype(np.float32),
+    dtype=dtype,
+    device=device,
+)
+
+ref_image = data[:, :, data.shape[-2] // 2, :].clone()
+
 (
     acceptor,
     donor,
@@ -153,13 +167,16 @@ filename_raw_json: str = "raw/Exp001_Trial001_Part001_meta.txt"
     angle_refref,
     tvec_refref,
 ) = align_cameras(
-    filename_raw_json=filename_raw_json,
-    filename_bin_mat=filename_bin_mat_fake,
+    channels=channels,
+    data=data,
+    ref_image=ref_image,
     device=device,
     dtype=dtype,
     batch_size=batch_size,
     fill_value=-1,
 )
+del data
+
 
 print("References Acceptor <-> Donor:")
 print("Rotation:")
