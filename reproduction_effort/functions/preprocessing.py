@@ -1,10 +1,9 @@
-import scipy.io as sio  # type: ignore
 import torch
-import numpy as np
-import json
+
 
 from functions.make_mask import make_mask
-from functions.convert_camera_sequenc_to_list import convert_camera_sequenc_to_list
+from functions.heart_beat_frequency import heart_beat_frequency
+from functions.adjust_factor import adjust_factor
 from functions.preprocess_camera_sequence import preprocess_camera_sequence
 from functions.interpolate_along_time import interpolate_along_time
 from functions.gauss_smear import gauss_smear
@@ -13,8 +12,8 @@ from functions.regression import regression
 
 @torch.no_grad()
 def preprocessing(
-    filename_metadata: str,
-    filename_data: str,
+    cameras: list[str],
+    camera_sequence: list[torch.Tensor],
     filename_mask: str,
     device: torch.device,
     first_none_ramp_frame: int,
@@ -22,27 +21,17 @@ def preprocessing(
     temporal_width: float,
     target_camera: list[str],
     regressor_cameras: list[str],
+    lower_frequency_heartbeat: float,
+    upper_frequency_heartbeat: float,
+    sample_frequency: float,
     dtype: torch.dtype = torch.float32,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
-    data: torch.Tensor = torch.tensor(
-        sio.loadmat(filename_data)["data"].astype(np.float32),
+    mask: torch.Tensor = make_mask(
+        filename_mask=filename_mask,
+        camera_sequence=camera_sequence,
         device=device,
         dtype=dtype,
-    )
-
-    with open(filename_metadata, "r") as file_handle:
-        metadata: dict = json.load(file_handle)
-    cameras: list[str] = metadata["channelKey"]
-
-    required_order: list[str] = ["acceptor", "donor", "oxygenation", "volume"]
-
-    mask: torch.Tensor = make_mask(
-        filename_mask=filename_mask, data=data, device=device, dtype=dtype
-    )
-
-    camera_sequence: list[torch.Tensor] = convert_camera_sequenc_to_list(
-        data=data, required_order=required_order, cameras=cameras
     )
 
     for num_cams in range(len(camera_sequence)):
@@ -60,6 +49,15 @@ def preprocessing(
     camera_sequence_filtered: list[torch.Tensor] = []
     for id in range(0, len(camera_sequence)):
         camera_sequence_filtered.append(camera_sequence[id].clone())
+
+    idx_volume: int = cameras.index("volume")
+    heart_rate: float = heart_beat_frequency(
+        input=camera_sequence_filtered[idx_volume],
+        lower_frequency_heartbeat=lower_frequency_heartbeat,
+        upper_frequency_heartbeat=upper_frequency_heartbeat,
+        sample_frequency=sample_frequency,
+        mask=mask,
+    )
 
     camera_sequence_filtered = gauss_smear(
         camera_sequence_filtered,
@@ -89,5 +87,25 @@ def preprocessing(
             first_none_ramp_frame=first_none_ramp_frame,
         )
         results.append(output)
+
+    lower_frequency_heartbeat_selection: float = heart_rate - 3
+    upper_frequency_heartbeat_selection: float = heart_rate + 3
+
+    donor_correction_factor, acceptor_correction_factor = adjust_factor(
+        input_acceptor=results[0],
+        input_donor=results[1],
+        lower_frequency_heartbeat=lower_frequency_heartbeat_selection,
+        upper_frequency_heartbeat=upper_frequency_heartbeat_selection,
+        sample_frequency=sample_frequency,
+        mask=mask,
+    )
+
+    results[0] = acceptor_correction_factor * (
+        results[0] - results[0].mean(dim=-1, keepdim=True)
+    ) + results[0].mean(dim=-1, keepdim=True)
+
+    results[1] = donor_correction_factor * (
+        results[1] - results[1].mean(dim=-1, keepdim=True)
+    ) + results[1].mean(dim=-1, keepdim=True)
 
     return results[0], results[1], mask

@@ -1,8 +1,5 @@
 import torch
 import torchvision as tv  # type: ignore
-import numpy as np
-import json
-import scipy.io as sio  # type: ignore
 
 from functions.align_refref import align_refref
 from functions.perform_donor_volume_rotation import perform_donor_volume_rotation
@@ -12,8 +9,9 @@ from functions.ImageAlignment import ImageAlignment
 
 @torch.no_grad()
 def align_cameras(
-    filename_raw_json: str,
-    filename_bin_mat: str,
+    channels: list[str],
+    data: torch.Tensor,
+    ref_image: torch.Tensor,
     device: torch.device,
     dtype: torch.dtype,
     batch_size: int,
@@ -30,18 +28,6 @@ def align_cameras(
 ]:
     image_alignment = ImageAlignment(default_dtype=dtype, device=device)
 
-    # --- Load data ---
-    with open(filename_raw_json, "r") as file_handle:
-        metadata: dict = json.load(file_handle)
-    channels: list[str] = metadata["channelKey"]
-
-    data = torch.tensor(
-        sio.loadmat(filename_bin_mat)["nparray"].astype(np.float32),
-        device=device,
-        dtype=dtype,
-    )
-    # --==-- DONE --==--
-
     # --- Get reference image ---
     acceptor_index: int = channels.index("acceptor")
     donor_index: int = channels.index("donor")
@@ -55,32 +41,25 @@ def align_cameras(
     donor = data[..., donor_index].moveaxis(-1, 0).clone()
     oxygenation = data[..., oxygenation_index].moveaxis(-1, 0).clone()
     volume = data[..., volume_index].moveaxis(-1, 0).clone()
+
+    ref_image_acceptor = ref_image[..., acceptor_index].clone()
+    ref_image_donor = ref_image[..., donor_index].clone()
+    ref_image_oxygenation = ref_image[..., oxygenation_index].clone()
+    ref_image_volume = ref_image[..., volume_index].clone()
     del data
     # --==-- DONE --==--
 
     # --- Calculate translation and rotation between the reference images ---
     angle_refref, tvec_refref, ref_image_acceptor, ref_image_donor = align_refref(
-        ref_image_acceptor=acceptor[
-            acceptor.shape[0] // 2,
-            :,
-            :,
-        ],
-        ref_image_donor=donor[
-            donor.shape[0] // 2,
-            :,
-            :,
-        ],
+        ref_image_acceptor=ref_image_acceptor,
+        ref_image_donor=ref_image_donor,
         image_alignment=image_alignment,
         batch_size=batch_size,
         fill_value=fill_value,
     )
 
     ref_image_oxygenation = tv.transforms.functional.affine(
-        img=oxygenation[
-            oxygenation.shape[0] // 2,
-            :,
-            :,
-        ].unsqueeze(0),
+        img=ref_image_oxygenation.unsqueeze(0),
         angle=-float(angle_refref),
         translate=[0, 0],
         scale=1.0,
@@ -97,15 +76,7 @@ def align_cameras(
         shear=0,
         interpolation=tv.transforms.InterpolationMode.BILINEAR,
         fill=fill_value,
-    )
-
-    ref_image_oxygenation = ref_image_oxygenation.squeeze(0)
-
-    ref_image_volume = volume[
-        volume.shape[0] // 2,
-        :,
-        :,
-    ].clone()
+    ).squeeze(0)
 
     # --==-- DONE --==--
 
