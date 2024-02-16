@@ -25,6 +25,7 @@ def preprocessing(
     upper_frequency_heartbeat: float,
     sample_frequency: float,
     dtype: torch.dtype = torch.float32,
+    power_factors: None | list[float] = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
     mask: torch.Tensor = make_mask(
@@ -44,20 +45,24 @@ def preprocessing(
         )
 
     # Interpolate in-between images
-    interpolate_along_time(camera_sequence)
+    if power_factors is None:
+        interpolate_along_time(camera_sequence)
 
     camera_sequence_filtered: list[torch.Tensor] = []
     for id in range(0, len(camera_sequence)):
         camera_sequence_filtered.append(camera_sequence[id].clone())
 
-    idx_volume: int = cameras.index("volume")
-    heart_rate: float = heart_beat_frequency(
-        input=camera_sequence_filtered[idx_volume],
-        lower_frequency_heartbeat=lower_frequency_heartbeat,
-        upper_frequency_heartbeat=upper_frequency_heartbeat,
-        sample_frequency=sample_frequency,
-        mask=mask,
-    )
+    if power_factors is None:
+        idx_volume: int = cameras.index("volume")
+        heart_rate: None | float = heart_beat_frequency(
+            input=camera_sequence_filtered[idx_volume],
+            lower_frequency_heartbeat=lower_frequency_heartbeat,
+            upper_frequency_heartbeat=upper_frequency_heartbeat,
+            sample_frequency=sample_frequency,
+            mask=mask,
+        )
+    else:
+        heart_rate = None
 
     camera_sequence_filtered = gauss_smear(
         camera_sequence_filtered,
@@ -88,8 +93,12 @@ def preprocessing(
         )
         results.append(output)
 
-    lower_frequency_heartbeat_selection: float = heart_rate - 3
-    upper_frequency_heartbeat_selection: float = heart_rate + 3
+    if heart_rate is not None:
+        lower_frequency_heartbeat_selection: float = heart_rate - 3
+        upper_frequency_heartbeat_selection: float = heart_rate + 3
+    else:
+        lower_frequency_heartbeat_selection = 0
+        upper_frequency_heartbeat_selection = 0
 
     donor_correction_factor, acceptor_correction_factor = adjust_factor(
         input_acceptor=results[0],
@@ -98,6 +107,7 @@ def preprocessing(
         upper_frequency_heartbeat=upper_frequency_heartbeat_selection,
         sample_frequency=sample_frequency,
         mask=mask,
+        power_factors=power_factors,
     )
 
     results[0] = acceptor_correction_factor * (
