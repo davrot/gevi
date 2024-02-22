@@ -6,13 +6,11 @@ import matplotlib.pyplot as plt
 import h5py  # type: ignore
 import scipy.io as sio  # type: ignore
 
-
 from functions.binning import binning
 from functions.align_cameras import align_cameras
 from functions.preprocessing import preprocessing
 from functions.bandpass import bandpass
-from functions.make_mask import make_mask
-from functions.interpolate_along_time import interpolate_along_time
+
 
 if torch.cuda.is_available():
     device_name: str = "cuda:0"
@@ -48,8 +46,6 @@ test_overwrite_with_old_bining: bool = False
 test_overwrite_with_old_aligned: bool = True
 filename_data_binning_replace: str = "bin_old/Exp001_Trial001_Part001.mat"
 filename_data_aligned_replace: str = "aligned_old/Exp001_Trial001_Part001.mat"
-
-remove_heartbeat: bool = True
 
 data = torch.tensor(np.load(filename_raw).astype(np.float32), dtype=dtype)
 
@@ -119,80 +115,6 @@ if test_overwrite_with_old_aligned:
     camera_sequence[3] = data_aligned_replace[..., 3].clone()
     del data_aligned_replace
 
-# ->
-
-if remove_heartbeat:
-    mask: torch.Tensor = make_mask(
-        filename_mask=filename_mask,
-        camera_sequence=camera_sequence,
-        device=device,
-        dtype=dtype,
-    )
-
-    mask_flatten = mask.flatten(start_dim=0, end_dim=-1)
-
-    interpolate_along_time(camera_sequence)
-
-    heartbeat_ts: torch.Tensor = bandpass(
-        data=camera_sequence[channels.index("volume")].clone(),
-        device=camera_sequence[channels.index("volume")].device,
-        low_frequency=lower_freqency_bandpass,
-        high_frequency=upper_freqency_bandpass,
-        fs=sample_frequency,
-        filtfilt_chuck_size=10,
-    )
-
-    heartbeat_ts_copy = heartbeat_ts.clone()
-
-    heartbeat_ts = heartbeat_ts.flatten(start_dim=0, end_dim=-2)
-    heartbeat_ts = heartbeat_ts[mask_flatten, :]
-
-    heartbeat_ts = heartbeat_ts.movedim(0, -1)
-    heartbeat_ts -= heartbeat_ts.mean(dim=0, keepdim=True)
-
-    volume_heartbeat, _, _ = torch.linalg.svd(heartbeat_ts, full_matrices=False)
-    volume_heartbeat = volume_heartbeat[:, 0]
-    volume_heartbeat -= volume_heartbeat[first_none_ramp_frame:].mean()
-    volume_heartbeat = volume_heartbeat.unsqueeze(0).unsqueeze(0)
-
-    heartbeat_coefficients: list[torch.Tensor] = []
-    for i in range(0, len(camera_sequence)):
-        y = bandpass(
-            data=camera_sequence[i].clone(),
-            device=camera_sequence[i].device,
-            low_frequency=lower_freqency_bandpass,
-            high_frequency=upper_freqency_bandpass,
-            fs=sample_frequency,
-            filtfilt_chuck_size=10,
-        )[..., first_none_ramp_frame:]
-        y -= y.mean(dim=-1, keepdim=True)
-
-        heartbeat_coefficients.append(
-            (
-                (volume_heartbeat[..., first_none_ramp_frame:] * y).sum(
-                    dim=-1, keepdim=True
-                )
-                / (volume_heartbeat[..., first_none_ramp_frame:] ** 2).sum(
-                    dim=-1, keepdim=True
-                )
-            )
-            * mask.unsqueeze(-1)
-        )
-    del y
-
-    donor_power_factor = heartbeat_coefficients[channels.index("donor")].clone()
-    acceptor_power_factor = heartbeat_coefficients[channels.index("acceptor")].clone()
-    power_factors: None | list[torch.Tensor] = [
-        donor_power_factor,
-        acceptor_power_factor,
-    ]
-
-    for i in range(0, len(camera_sequence)):
-        camera_sequence[i] -= heartbeat_coefficients[i] * volume_heartbeat
-else:
-    power_factors = None
-# <-
-
 data_acceptor, data_donor, mask = preprocessing(
     cameras=channels,
     camera_sequence=camera_sequence,
@@ -206,7 +128,6 @@ data_acceptor, data_donor, mask = preprocessing(
     lower_frequency_heartbeat=lower_frequency_heartbeat,
     upper_frequency_heartbeat=upper_frequency_heartbeat,
     sample_frequency=sample_frequency,
-    power_factors=power_factors,
 )
 
 ratio_sequence: torch.Tensor = data_acceptor / data_donor
@@ -229,16 +150,97 @@ plt.figure(1)
 plt.subplot(2, 1, 1)
 new_select = new[pos_x, pos_y, :]
 old_select = old[pos_x, pos_y, :]
-plt.plot(old_select, "r", label="Old")
-plt.plot(new_select, "k", label="New")
-
-# plt.plot(old_select - new_select + 1.0, label="Old - New + 1")
+plt.plot(new_select, label="New")
+plt.plot(old_select, "--", label="Old")
+plt.plot(old_select - new_select + 1.0, label="Old - New + 1")
 plt.title(f"Position: {pos_x}, {pos_y}")
 plt.legend()
 
 plt.subplot(2, 1, 2)
-differences = (np.abs(new - old)).max(axis=-1) * mask.cpu().numpy()
-plt.imshow(differences, cmap="hot")
+differences = (np.abs(new - old)).max(axis=-1)
+plt.imshow(differences)
 plt.title("Max of abs(new-old) along time")
+plt.colorbar()
+plt.show(block=False)
+
+
+ratio_sequence_a = bandpass(
+    data=data_acceptor,
+    device=data_acceptor.device,
+    low_frequency=lower_freqency_bandpass,
+    high_frequency=upper_freqency_bandpass,
+    fs=100.0,
+    filtfilt_chuck_size=10,
+)
+
+ratio_sequence_b = bandpass(
+    data=data_donor,
+    device=data_donor.device,
+    low_frequency=lower_freqency_bandpass,
+    high_frequency=upper_freqency_bandpass,
+    fs=100.0,
+    filtfilt_chuck_size=10,
+)
+
+original_shape = ratio_sequence_a.shape
+
+ratio_sequence_a = ratio_sequence_a.flatten(start_dim=0, end_dim=-2)
+ratio_sequence_b = ratio_sequence_b.flatten(start_dim=0, end_dim=-2)
+
+mask = mask.flatten(start_dim=0, end_dim=-1)
+ratio_sequence_a = ratio_sequence_a[mask, :]
+ratio_sequence_b = ratio_sequence_b[mask, :]
+
+ratio_sequence_a = ratio_sequence_a.movedim(0, -1)
+ratio_sequence_b = ratio_sequence_b.movedim(0, -1)
+
+ratio_sequence_a -= ratio_sequence_a.mean(dim=0, keepdim=True)
+ratio_sequence_b -= ratio_sequence_b.mean(dim=0, keepdim=True)
+
+u_a, s_a, Vh_a = torch.linalg.svd(ratio_sequence_a, full_matrices=False)
+u_a = u_a[:, 0]
+s_a = s_a[0]
+Vh_a = Vh_a[0, :]
+
+heartbeatactivitmap_a = torch.zeros(
+    (original_shape[0], original_shape[1]), device=Vh_a.device, dtype=Vh_a.dtype
+).flatten(start_dim=0, end_dim=-1)
+
+heartbeatactivitmap_a *= torch.nan
+heartbeatactivitmap_a[mask] = s_a * Vh_a
+heartbeatactivitmap_a = heartbeatactivitmap_a.reshape(
+    (original_shape[0], original_shape[1])
+)
+
+u_b, s_b, Vh_b = torch.linalg.svd(ratio_sequence_b, full_matrices=False)
+u_b = u_b[:, 0]
+s_b = s_b[0]
+Vh_b = Vh_b[0, :]
+
+heartbeatactivitmap_b = torch.zeros(
+    (original_shape[0], original_shape[1]), device=Vh_b.device, dtype=Vh_b.dtype
+).flatten(start_dim=0, end_dim=-1)
+
+heartbeatactivitmap_b *= torch.nan
+heartbeatactivitmap_b[mask] = s_b * Vh_b
+heartbeatactivitmap_b = heartbeatactivitmap_b.reshape(
+    (original_shape[0], original_shape[1])
+)
+
+plt.figure(2)
+plt.subplot(2, 1, 1)
+plt.plot(u_a.cpu(), label="aceptor")
+plt.plot(u_b.cpu(), label="donor")
+plt.legend()
+plt.subplot(2, 1, 2)
+plt.imshow(
+    torch.cat(
+        (
+            heartbeatactivitmap_a,
+            heartbeatactivitmap_b,
+        ),
+        dim=1,
+    ).cpu()
+)
 plt.colorbar()
 plt.show()
