@@ -8,7 +8,7 @@ import scipy.io as sio  # type: ignore
 
 from functions.binning import binning
 from functions.align_cameras import align_cameras
-from functions.preprocessing import preprocessing
+from functions.preprocessing_classic import preprocessing
 from functions.bandpass import bandpass
 
 
