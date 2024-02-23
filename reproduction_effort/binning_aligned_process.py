@@ -178,12 +178,36 @@ for i in range(0, len(camera_sequence)):
     )
 del y
 
-donor_power_factor = heartbeat_coefficients[channels.index("donor")].clone()
-acceptor_power_factor = heartbeat_coefficients[channels.index("acceptor")].clone()
+donor_correction_factor = heartbeat_coefficients[channels.index("donor")].clone()
+acceptor_correction_factor = heartbeat_coefficients[channels.index("acceptor")].clone()
 
 
 for i in range(0, len(camera_sequence)):
     camera_sequence[i] -= heartbeat_coefficients[i] * volume_heartbeat
+
+
+donor_factor: torch.Tensor = (donor_correction_factor + acceptor_correction_factor) / (
+    2 * donor_correction_factor
+)
+acceptor_factor: torch.Tensor = (
+    donor_correction_factor + acceptor_correction_factor
+) / (2 * acceptor_correction_factor)
+
+
+# mean_values: list = []
+# for i in range(0, len(channels)):
+#     mean_values.append(
+#         camera_sequence[i][..., first_none_ramp_frame:].nanmean(dim=-1, keepdim=True)
+#     )
+#     camera_sequence[i] -= mean_values[i]
+
+camera_sequence[channels.index("acceptor")] *= acceptor_factor * mask.unsqueeze(-1)
+camera_sequence[channels.index("donor")] *= donor_factor * mask.unsqueeze(-1)
+
+# for i in range(0, len(channels)):
+#     camera_sequence[i] -= mean_values[i]
+
+# exit()
 # <-
 
 data_acceptor, data_donor, mask = preprocessing(
@@ -196,8 +220,6 @@ data_acceptor, data_donor, mask = preprocessing(
     temporal_width=temporal_width,
     target_camera=target_camera,
     regressor_cameras=regressor_cameras,
-    donor_correction_factor=donor_power_factor,
-    acceptor_correction_factor=acceptor_power_factor,
 )
 
 ratio_sequence: torch.Tensor = data_acceptor / data_donor

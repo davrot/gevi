@@ -8,7 +8,7 @@ import scipy.io as sio  # type: ignore
 
 from functions.binning import binning
 from functions.align_cameras import align_cameras
-from functions.preprocessing_classic import preprocessing
+from functions.preprocessing_classsic import preprocessing
 from functions.bandpass import bandpass
 
 
@@ -43,7 +43,7 @@ required_order: list[str] = ["acceptor", "donor", "oxygenation", "volume"]
 
 
 test_overwrite_with_old_bining: bool = False
-test_overwrite_with_old_aligned: bool = True
+test_overwrite_with_old_aligned: bool = False
 filename_data_binning_replace: str = "bin_old/Exp001_Trial001_Part001.mat"
 filename_data_aligned_replace: str = "aligned_old/Exp001_Trial001_Part001.mat"
 
@@ -143,104 +143,150 @@ old: np.ndarray = np.array(file_handle["ratioSequence"])  # type:ignore
 old = np.moveaxis(old, 0, -1)
 old = np.moveaxis(old, 0, -2)
 
-pos_x = 25
-pos_y = 75
+# pos_x = 25
+# pos_y = 75
 
-plt.figure(1)
-plt.subplot(2, 1, 1)
-new_select = new[pos_x, pos_y, :]
-old_select = old[pos_x, pos_y, :]
-plt.plot(new_select, label="New")
-plt.plot(old_select, "--", label="Old")
-plt.plot(old_select - new_select + 1.0, label="Old - New + 1")
-plt.title(f"Position: {pos_x}, {pos_y}")
-plt.legend()
+# plt.figure(1)
+# new_select = new[pos_x, pos_y, :]
+# old_select = old[pos_x, pos_y, :]
+# plt.plot(new_select, label="New")
+# plt.plot(old_select, "--", label="Old")
+# # plt.plot(old_select - new_select + 1.0, label="Old - New + 1")
+# plt.title(f"Position: {pos_x}, {pos_y}")
+# plt.legend()
 
-plt.subplot(2, 1, 2)
-differences = (np.abs(new - old)).max(axis=-1)
-plt.imshow(differences)
-plt.title("Max of abs(new-old) along time")
+# plt.show(block=False)
+
+
+# plt.figure(2)
+# new_select1 = new[pos_x + 1, pos_y, :]
+# old_select1 = old[pos_x + 1, pos_y, :]
+# plt.plot(new_select1, label="New")
+# plt.plot(old_select1, "--", label="Old")
+# # plt.plot(old_select - new_select + 1.0, label="Old - New + 1")
+# plt.title(f"Position: {pos_x+1}, {pos_y}")
+# plt.legend()
+
+# plt.show(block=False)
+
+
+# plt.figure(3)
+# plt.plot(old_select, label="Old")
+# plt.plot(old_select1, "--", label="Old")
+# # plt.plot(old_select - new_select + 1.0, label="Old - New + 1")
+# # plt.title(f"Position: {pos_x+1}, {pos_y}")
+# plt.legend()
+
+# s1 = old_select[np.newaxis, 100:]
+# s2 = new_select[np.newaxis, 100:]
+# s3 = old_select1[np.newaxis, 100:]
+
+# print("old-new", np.corrcoef(np.concatenate((s1, s2))))
+# print("old-oldshift", np.corrcoef(np.concatenate((s1, s3))))
+
+plt.figure(4)
+mask = mask.cpu().numpy()
+mask_flatten = np.reshape(mask, (mask.shape[0] * mask.shape[1]))
+data = np.reshape(old, (old.shape[0] * old.shape[1], old.shape[-1]))
+data = data[mask_flatten == 1, 100:]
+cc = np.corrcoef(data)
+
+cc_back = np.zeros_like(mask, dtype=np.float32)
+cc_back = np.reshape(cc_back, (mask.shape[0] * mask.shape[1]))
+
+rng = np.random.default_rng()
+cc_back[mask_flatten] = cc[:, 400]
+cc_back = np.reshape(cc_back, (mask.shape[0], mask.shape[1]))
+
+plt.subplot(1, 2, 1)
+plt.imshow(cc_back, cmap="hot")
 plt.colorbar()
-plt.show(block=False)
+
+plt.subplot(1, 2, 2)
+plt.plot(cc[:, 400])
 
 
-ratio_sequence_a = bandpass(
-    data=data_acceptor,
-    device=data_acceptor.device,
-    low_frequency=lower_freqency_bandpass,
-    high_frequency=upper_freqency_bandpass,
-    fs=100.0,
-    filtfilt_chuck_size=10,
-)
+plt.show(block=True)
 
-ratio_sequence_b = bandpass(
-    data=data_donor,
-    device=data_donor.device,
-    low_frequency=lower_freqency_bandpass,
-    high_frequency=upper_freqency_bandpass,
-    fs=100.0,
-    filtfilt_chuck_size=10,
-)
 
-original_shape = ratio_sequence_a.shape
+# block=False
+# ratio_sequence_a = bandpass(
+#     data=data_acceptor,
+#     device=data_acceptor.device,
+#     low_frequency=lower_freqency_bandpass,
+#     high_frequency=upper_freqency_bandpass,
+#     fs=100.0,
+#     filtfilt_chuck_size=10,
+# )
 
-ratio_sequence_a = ratio_sequence_a.flatten(start_dim=0, end_dim=-2)
-ratio_sequence_b = ratio_sequence_b.flatten(start_dim=0, end_dim=-2)
+# ratio_sequence_b = bandpass(
+#     data=data_donor,
+#     device=data_donor.device,
+#     low_frequency=lower_freqency_bandpass,
+#     high_frequency=upper_freqency_bandpass,
+#     fs=100.0,
+#     filtfilt_chuck_size=10,
+# )
 
-mask = mask.flatten(start_dim=0, end_dim=-1)
-ratio_sequence_a = ratio_sequence_a[mask, :]
-ratio_sequence_b = ratio_sequence_b[mask, :]
+# original_shape = ratio_sequence_a.shape
 
-ratio_sequence_a = ratio_sequence_a.movedim(0, -1)
-ratio_sequence_b = ratio_sequence_b.movedim(0, -1)
+# ratio_sequence_a = ratio_sequence_a.flatten(start_dim=0, end_dim=-2)
+# ratio_sequence_b = ratio_sequence_b.flatten(start_dim=0, end_dim=-2)
 
-ratio_sequence_a -= ratio_sequence_a.mean(dim=0, keepdim=True)
-ratio_sequence_b -= ratio_sequence_b.mean(dim=0, keepdim=True)
+# mask = mask.flatten(start_dim=0, end_dim=-1)
+# ratio_sequence_a = ratio_sequence_a[mask, :]
+# ratio_sequence_b = ratio_sequence_b[mask, :]
 
-u_a, s_a, Vh_a = torch.linalg.svd(ratio_sequence_a, full_matrices=False)
-u_a = u_a[:, 0]
-s_a = s_a[0]
-Vh_a = Vh_a[0, :]
+# ratio_sequence_a = ratio_sequence_a.movedim(0, -1)
+# ratio_sequence_b = ratio_sequence_b.movedim(0, -1)
 
-heartbeatactivitmap_a = torch.zeros(
-    (original_shape[0], original_shape[1]), device=Vh_a.device, dtype=Vh_a.dtype
-).flatten(start_dim=0, end_dim=-1)
+# ratio_sequence_a -= ratio_sequence_a.mean(dim=0, keepdim=True)
+# ratio_sequence_b -= ratio_sequence_b.mean(dim=0, keepdim=True)
 
-heartbeatactivitmap_a *= torch.nan
-heartbeatactivitmap_a[mask] = s_a * Vh_a
-heartbeatactivitmap_a = heartbeatactivitmap_a.reshape(
-    (original_shape[0], original_shape[1])
-)
+# u_a, s_a, Vh_a = torch.linalg.svd(ratio_sequence_a, full_matrices=False)
+# u_a = u_a[:, 0]
+# s_a = s_a[0]
+# Vh_a = Vh_a[0, :]
 
-u_b, s_b, Vh_b = torch.linalg.svd(ratio_sequence_b, full_matrices=False)
-u_b = u_b[:, 0]
-s_b = s_b[0]
-Vh_b = Vh_b[0, :]
+# heartbeatactivitmap_a = torch.zeros(
+#     (original_shape[0], original_shape[1]), device=Vh_a.device, dtype=Vh_a.dtype
+# ).flatten(start_dim=0, end_dim=-1)
 
-heartbeatactivitmap_b = torch.zeros(
-    (original_shape[0], original_shape[1]), device=Vh_b.device, dtype=Vh_b.dtype
-).flatten(start_dim=0, end_dim=-1)
+# heartbeatactivitmap_a *= torch.nan
+# heartbeatactivitmap_a[mask] = s_a * Vh_a
+# heartbeatactivitmap_a = heartbeatactivitmap_a.reshape(
+#     (original_shape[0], original_shape[1])
+# )
 
-heartbeatactivitmap_b *= torch.nan
-heartbeatactivitmap_b[mask] = s_b * Vh_b
-heartbeatactivitmap_b = heartbeatactivitmap_b.reshape(
-    (original_shape[0], original_shape[1])
-)
+# u_b, s_b, Vh_b = torch.linalg.svd(ratio_sequence_b, full_matrices=False)
+# u_b = u_b[:, 0]
+# s_b = s_b[0]
+# Vh_b = Vh_b[0, :]
 
-plt.figure(2)
-plt.subplot(2, 1, 1)
-plt.plot(u_a.cpu(), label="aceptor")
-plt.plot(u_b.cpu(), label="donor")
-plt.legend()
-plt.subplot(2, 1, 2)
-plt.imshow(
-    torch.cat(
-        (
-            heartbeatactivitmap_a,
-            heartbeatactivitmap_b,
-        ),
-        dim=1,
-    ).cpu()
-)
-plt.colorbar()
-plt.show()
+# heartbeatactivitmap_b = torch.zeros(
+#     (original_shape[0], original_shape[1]), device=Vh_b.device, dtype=Vh_b.dtype
+# ).flatten(start_dim=0, end_dim=-1)
+
+# heartbeatactivitmap_b *= torch.nan
+# heartbeatactivitmap_b[mask] = s_b * Vh_b
+# heartbeatactivitmap_b = heartbeatactivitmap_b.reshape(
+#     (original_shape[0], original_shape[1])
+# )
+
+# plt.figure(2)
+# plt.subplot(2, 1, 1)
+# plt.plot(u_a.cpu(), label="aceptor")
+# plt.plot(u_b.cpu(), label="donor")
+# plt.legend()
+# plt.subplot(2, 1, 2)
+# plt.imshow(
+#     torch.cat(
+#         (
+#             heartbeatactivitmap_a,
+#             heartbeatactivitmap_b,
+#         ),
+#         dim=1,
+#     ).cpu()
+# )
+# plt.colorbar()
+# plt.show()
