@@ -18,7 +18,7 @@ def preprocess_camera_sequence(
 
     camera_sequence = camera_sequence / camera_sequence[
         :, :, first_none_ramp_frame:
-    ].mean(
+    ].nanmean(
         dim=2,
         keepdim=True,
     )

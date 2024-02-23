@@ -18,8 +18,6 @@ def preprocessing(
     temporal_width: float,
     target_camera: list[str],
     regressor_cameras: list[str],
-    donor_correction_factor: torch.Tensor,
-    acceptor_correction_factor: torch.Tensor,
     dtype: torch.dtype = torch.float32,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
@@ -71,15 +69,5 @@ def preprocessing(
             first_none_ramp_frame=first_none_ramp_frame,
         )
         results.append(output)
-
-    donor_factor: torch.Tensor = (
-        donor_correction_factor + acceptor_correction_factor
-    ) / (2 * donor_correction_factor)
-    acceptor_factor: torch.Tensor = (
-        donor_correction_factor + acceptor_correction_factor
-    ) / (2 * acceptor_correction_factor)
-
-    results[0] *= acceptor_factor * mask.unsqueeze(-1)
-    results[1] *= donor_factor * mask.unsqueeze(-1)
 
     return results[0], results[1], mask
