@@ -3,23 +3,19 @@ import matplotlib
 import numpy as np
 import torch
 import os
-import json
 
-from jsmin import jsmin  # type:ignore
 from matplotlib.widgets import Slider, Button  # type:ignore
 from functools import partial
 from functions.gauss_smear_individual import gauss_smear_individual
 from functions.create_logger import create_logger
 from functions.get_torch_device import get_torch_device
+from functions.load_config import load_config
 
 mylogger = create_logger(
     save_logging_messages=True, display_logging_messages=True, log_stage_name="stage_2"
 )
 
-mylogger.info("loading config file")
-with open("config.json", "r") as file:
-    config = json.loads(jsmin(file.read()))
-
+config = load_config(mylogger=mylogger)
 
 path: str = config["ref_image_path"]
 use_channel: str = "donor"

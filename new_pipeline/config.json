@@ -11,16 +11,21 @@
         "oxygenation",
         "volume"
     ],
-    "dtype": "float32",
-    "binning_enable": false,
+    // binning
+    "binning_enable": true,
+    "binning_before_alignment": false, // otherwise at the end after everything else
     "binning_kernel_size": 4,
     "binning_stride": 4,
     "binning_divisor_override": 1,
+    // alignment
+    "alignment_batch_size": 200,
     // Heart beat detection
     "lower_freqency_bandpass": 5.0, // Hz
     "upper_freqency_bandpass": 14.0, // Hz
+    "heartbeat_filtfilt_chuck_size": 10,
     // LED Ramp on
     "skip_frames_in_the_beginning": 100, // Frames
     // PyTorch
+    "dtype": "float32",
     "force_to_cpu": false
 }

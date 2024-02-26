@@ -1,5 +1,4 @@
 import os
-import json
 import numpy as np
 
 import matplotlib.pyplot as plt  # type:ignore
@@ -9,9 +8,9 @@ from matplotlib.widgets import Button  # type:ignore
 # pip install roipoly
 from roipoly import RoiPoly
 
-from jsmin import jsmin  # type:ignore
 from functions.create_logger import create_logger
 from functions.get_torch_device import get_torch_device
+from functions.load_config import load_config
 
 
 def compose_image(image_3color: np.ndarray, mask: np.ndarray) -> np.ndarray:
@@ -86,9 +85,7 @@ mylogger = create_logger(
     save_logging_messages=True, display_logging_messages=True, log_stage_name="stage_3"
 )
 
-mylogger.info("loading config file")
-with open("config.json", "r") as file:
-    config = json.loads(jsmin(file.read()))
+config = load_config(mylogger=mylogger)
 
 device = get_torch_device(mylogger, config["force_to_cpu"])
 
@@ -158,7 +155,3 @@ mylogger.info("Display")
 new_roi: RoiPoly = RoiPoly(ax=ax_main, color="r", close_fig=False, show_fig=False)
 
 plt.show()
-
-
-#     image_handle.remove()
-#

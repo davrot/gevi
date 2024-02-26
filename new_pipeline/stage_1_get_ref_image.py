@@ -1,6 +1,4 @@
-import json
 import os
-from jsmin import jsmin  # type: ignore
 import torch
 import numpy as np
 
@@ -12,14 +10,13 @@ from functions.bandpass import bandpass
 from functions.create_logger import create_logger
 from functions.load_meta_data import load_meta_data
 from functions.get_torch_device import get_torch_device
+from functions.load_config import load_config
 
 mylogger = create_logger(
     save_logging_messages=True, display_logging_messages=True, log_stage_name="stage_1"
 )
 
-mylogger.info("loading config file")
-with open("config.json", "r") as file:
-    config = json.loads(jsmin(file.read()))
+config = load_config(mylogger=mylogger)
 
 device = get_torch_device(mylogger, config["force_to_cpu"])
 
