@@ -11,6 +11,7 @@ from functions.get_parts import get_parts
 from functions.bandpass import bandpass
 from functions.create_logger import create_logger
 from functions.load_meta_data import load_meta_data
+from functions.get_torch_device import get_torch_device
 
 mylogger = create_logger(
     save_logging_messages=True, display_logging_messages=True, log_stage_name="stage_1"
@@ -20,16 +21,7 @@ mylogger.info("loading config file")
 with open("config.json", "r") as file:
     config = json.loads(jsmin(file.read()))
 
-if torch.cuda.is_available():
-    device_name: str = "cuda:0"
-else:
-    device_name = "cpu"
-
-if config["force_to_cpu"]:
-    device_name = "cpu"
-
-mylogger.info(f"Using device: {device_name}")
-device: torch.device = torch.device(device_name)
+device = get_torch_device(mylogger, config["force_to_cpu"])
 
 dtype_str: str = config["dtype"]
 dtype: torch.dtype = getattr(torch, dtype_str)
@@ -115,8 +107,8 @@ mylogger.info("-==- Done -==-")
 sample_frequency: float = 1.0 / meta_frame_time
 mylogger.info(
     (
-        f"Heartbeat power {config['lower_freqency_bandpass']}Hz"
-        f" - {config['upper_freqency_bandpass']}Hz,"
+        f"Heartbeat power {config['lower_freqency_bandpass']} Hz"
+        f" - {config['upper_freqency_bandpass']} Hz,"
         f" sample-rate: {sample_frequency},"
         f" skipping the first {config['skip_frames_in_the_beginning']} frames"
     )

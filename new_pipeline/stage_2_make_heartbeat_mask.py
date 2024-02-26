@@ -10,7 +10,7 @@ from matplotlib.widgets import Slider, Button  # type:ignore
 from functools import partial
 from functions.gauss_smear_individual import gauss_smear_individual
 from functions.create_logger import create_logger
-
+from functions.get_torch_device import get_torch_device
 
 mylogger = create_logger(
     save_logging_messages=True, display_logging_messages=True, log_stage_name="stage_2"
@@ -22,22 +22,17 @@ with open("config.json", "r") as file:
 
 threshold: float = 0.05
 path: str = config["ref_image_path"]
+use_channel: str = "donor"
+spatial_width: float = 4.0
+temporal_width: float = 0.1
 
-image_ref_file: str = os.path.join(path, "donor.npy")
-image_var_file: str = os.path.join(path, "donor_var.npy")
+
+image_ref_file: str = os.path.join(path, use_channel + ".npy")
+image_var_file: str = os.path.join(path, use_channel + "_var.npy")
 heartbeat_mask_file: str = os.path.join(path, "heartbeat_mask.npy")
 heartbeat_mask_threshold_file: str = os.path.join(path, "heartbeat_mask_threshold.npy")
 
-if torch.cuda.is_available():
-    device_name: str = "cuda:0"
-else:
-    device_name = "cpu"
-
-if config["force_to_cpu"]:
-    device_name = "cpu"
-
-mylogger.info(f"Using device: {device_name}")
-device: torch.device = torch.device(device_name)
+device = get_torch_device(mylogger, config["force_to_cpu"])
 
 
 def next_frame(
@@ -58,7 +53,7 @@ def next_frame(
 
 def on_clicked_accept(event: matplotlib.backend_bases.MouseEvent) -> None:
     global threshold
-    global volume_3color
+    global image_3color
     global path
     global mylogger
     global heartbeat_mask_file
@@ -66,7 +61,7 @@ def on_clicked_accept(event: matplotlib.backend_bases.MouseEvent) -> None:
 
     mylogger.info(f"Threshold: {threshold}")
 
-    mask: np.ndarray = volume_3color[..., 2] >= threshold
+    mask: np.ndarray = image_3color[..., 2] >= threshold
     mylogger.info(f"Save mask to: {heartbeat_mask_file}")
     np.save(heartbeat_mask_file, mask)
     mylogger.info(f"Save threshold to: {heartbeat_mask_threshold_file}")
@@ -89,15 +84,15 @@ image_var /= image_var.max()
 mylogger.info("Smear the image heartbeat power patially")
 temp, _ = gauss_smear_individual(
     input=torch.tensor(image_var[..., np.newaxis], device=device),
-    spatial_width=4.0,
-    temporal_width=0.1,
+    spatial_width=spatial_width,
+    temporal_width=temporal_width,
     use_matlab_mask=False,
 )
 temp /= temp.max()
 
 mylogger.info("-==- DONE -==-")
 
-volume_3color = np.concatenate(
+image_3color = np.concatenate(
     (
         np.zeros_like(image_ref[..., np.newaxis]),
         image_ref[..., np.newaxis],
@@ -108,9 +103,9 @@ volume_3color = np.concatenate(
 
 mylogger.info("Prepare image")
 
-display_image = volume_3color.copy()
+display_image = image_3color.copy()
 display_image[..., 2] = display_image[..., 0]
-mask = np.where(volume_3color[..., 2] >= threshold, 1.0, np.nan)[..., np.newaxis]
+mask = np.where(image_3color[..., 2] >= threshold, 1.0, np.nan)[..., np.newaxis]
 display_image *= mask
 display_image = np.nan_to_num(display_image, nan=1.0)
 
@@ -148,7 +143,7 @@ button_cancel = Button(
 button_cancel.on_clicked(on_clicked_cancel)  # type: ignore
 
 slice_slider.on_changed(
-    partial(next_frame, images=volume_3color, image_handle=image_handle)
+    partial(next_frame, images=image_3color, image_handle=image_handle)
 )
 
 mylogger.info("Display")
