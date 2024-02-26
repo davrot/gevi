@@ -23,6 +23,10 @@
     "lower_freqency_bandpass": 5.0, // Hz
     "upper_freqency_bandpass": 14.0, // Hz
     "heartbeat_filtfilt_chuck_size": 10,
+    // Gauss smear 
+    "gauss_smear_spatial_width": 8,
+    "gauss_smear_temporal_width": 0.1,
+    "gauss_smear_use_matlab_mask": false,
     // LED Ramp on
     "skip_frames_in_the_beginning": 100, // Frames
     // PyTorch
