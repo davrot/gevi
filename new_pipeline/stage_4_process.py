@@ -1,3 +1,7 @@
+# TODO: Problem 1: Rotation over time instable
+# TODO: Problem 2: I am only processing trials with one part
+# The latter on is no real problem. I just need an example...
+
 import numpy as np
 import torch
 import torchvision as tv  # type: ignore
@@ -21,8 +25,6 @@ from functions.perform_donor_volume_translation import perform_donor_volume_tran
 from functions.bandpass import bandpass
 from functions.gauss_smear_individual import gauss_smear_individual
 from functions.regression import regression
-
-import matplotlib.pyplot as plt
 
 
 @torch.no_grad()
@@ -218,8 +220,8 @@ def process_trial(
         mylogger.info("Binning of data")
         mylogger.info(
             (
-                f"kernel_size={int(config['binning_kernel_size'])},"
-                f"stride={int(config['binning_stride'])},"
+                f"kernel_size={int(config['binning_kernel_size'])}, "
+                f"stride={int(config['binning_stride'])}, "
                 f"divisor_override={int(config['binning_divisor_override'])}"
             )
         )
@@ -832,8 +834,8 @@ def process_trial(
         mylogger.info("Binning of data")
         mylogger.info(
             (
-                f"kernel_size={int(config['binning_kernel_size'])},"
-                f"stride={int(config['binning_stride'])},"
+                f"kernel_size={int(config['binning_kernel_size'])}, "
+                f"stride={int(config['binning_stride'])}, "
                 "divisor_override=None"
             )
         )
@@ -892,7 +894,7 @@ def process_trial(
         mylogger.info(f"ratio_sequence = h5read('{temp_path}','/ratio_sequence');")
         file_handle.close()
 
-    # del ratio_sequence
+    del ratio_sequence
     del mask_positve
     del mask_negative
 
@@ -901,24 +903,6 @@ def process_trial(
     mylogger.info("* TRIAL END ***********************************")
     mylogger.info("***********************************************")
     mylogger.info("")
-
-    file_handle = h5py.File("old.mat", "r")
-    old: np.ndarray = np.array(file_handle["ratioSequence"])  # type:ignore
-    # HDF5 loads everything backwards...
-    old = np.moveaxis(old, 0, -1)
-    old = np.moveaxis(old, 0, -2)
-
-    pos_x = 25
-    pos_y = 75
-
-    plt.figure(1)
-    new_select = ratio_sequence[pos_x, pos_y, :].cpu()
-    old_select = old[pos_x, pos_y, :]
-    plt.plot(new_select, "r", label="New")
-    plt.plot(old_select, "k", label="Old")
-    plt.title(f"Position: {pos_x}, {pos_y}")
-    plt.legend()
-    plt.show()
 
     return
 
@@ -939,6 +923,35 @@ device = get_torch_device(mylogger, config["force_to_cpu"])
 mylogger.info(f"Create directory {config['export_path']} in the case it does not exist")
 os.makedirs(config["export_path"], exist_ok=True)
 
-process_trial(
-    config=config, mylogger=mylogger, experiment_id=1, trial_id=1, device=device
+raw_data_path: str = os.path.join(
+    config["basic_path"],
+    config["recoding_data"],
+    config["mouse_identifier"],
+    config["raw_path"],
 )
+
+if os.path.isdir(raw_data_path) is False:
+    mylogger.info(f"ERROR: could not find raw directory {raw_data_path}!!!!")
+    exit()
+
+experiments = get_experiments(raw_data_path)
+
+for experiment_counter in range(0, experiments.shape[0]):
+    experiment_id = int(experiments[experiment_counter])
+    trials = get_trials(raw_data_path, experiment_id)
+    for trial_counter in range(0, trials.shape[0]):
+        trial_id = int(trials[trial_counter])
+
+        mylogger.info("")
+        mylogger.info(
+            f"======= EXPERIMENT ID: {experiment_id} ==== TRIAL ID: {trial_id} ======="
+        )
+        mylogger.info("")
+
+        process_trial(
+            config=config,
+            mylogger=mylogger,
+            experiment_id=experiment_id,
+            trial_id=trial_id,
+            device=device,
+        )
