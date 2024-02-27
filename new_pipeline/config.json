@@ -20,7 +20,7 @@
     ],
     // binning
     "binning_enable": true,
-    "binning_at_the_end": true,
+    "binning_at_the_end": false,
     "binning_kernel_size": 4,
     "binning_stride": 4,
     "binning_divisor_override": 1,
