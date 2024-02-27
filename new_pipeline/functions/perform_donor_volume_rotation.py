@@ -26,6 +26,7 @@ def perform_donor_volume_rotation(
 ]:
 
     mylogger.info("Calculate rotation between donor data and donor ref image")
+
     angle_donor = calculate_rotation(
         input=donor,
         reference_image=ref_image_donor,
@@ -43,6 +44,7 @@ def perform_donor_volume_rotation(
 
     mylogger.info("Average over both rotations")
     angle_donor_volume = (angle_donor + angle_volume) / 2.0
+    angle_donor_volume *= 0.0
 
     mylogger.info("Rotate acceptor data based on the average rotation")
     for frame_id in range(0, angle_donor_volume.shape[0]):

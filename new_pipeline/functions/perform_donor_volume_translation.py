@@ -45,6 +45,8 @@ def perform_donor_volume_translation(
     mylogger.info("Average over both translations")
     tvec_donor_volume = (tvec_donor + tvec_volume) / 2.0
 
+    tvec_donor_volume *= 0.0
+
     mylogger.info("Translate acceptor data based on the average translation vector")
     for frame_id in range(0, tvec_donor_volume.shape[0]):
         acceptor[frame_id, ...] = tv.transforms.functional.affine(
