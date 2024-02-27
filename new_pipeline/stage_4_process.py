@@ -22,6 +22,8 @@ from functions.bandpass import bandpass
 from functions.gauss_smear_individual import gauss_smear_individual
 from functions.regression import regression
 
+import matplotlib.pyplot as plt
+
 
 @torch.no_grad()
 def process_trial(
@@ -212,7 +214,7 @@ def process_trial(
     )
     mylogger.info("-==- Done -==-")
 
-    if config["binning_enable"]:
+    if config["binning_enable"] and (config["binning_at_the_end"] is False):
         mylogger.info("Binning of data")
         mylogger.info(
             (
@@ -462,6 +464,7 @@ def process_trial(
         f"max {round(float(tvec_donor_volume[:,1].max()),1)} "
         f"mean {round(float(tvec_donor_volume[:,1].mean()),1)} "
     )
+
     if config["save_alignment"]:
         temp_path = os.path.join(
             config["export_path"], experiment_name + "_tvec_donor_volume.npy"
@@ -667,7 +670,7 @@ def process_trial(
     mylogger.info("Preparation for regression -- Gauss smear")
     spatial_width = float(config["gauss_smear_spatial_width"])
 
-    if config["binning_enable"]:
+    if config["binning_enable"] and (config["binning_at_the_end"] is False):
         spatial_width /= float(config["binning_kernel_size"])
 
     mylogger.info(
@@ -825,6 +828,35 @@ def process_trial(
     ratio_sequence = torch.nan_to_num(ratio_sequence, nan=0.0)
     mylogger.info("-==- Done -==-")
 
+    if config["binning_enable"] and config["binning_at_the_end"]:
+        mylogger.info("Binning of data")
+        mylogger.info(
+            (
+                f"kernel_size={int(config['binning_kernel_size'])},"
+                f"stride={int(config['binning_stride'])},"
+                "divisor_override=None"
+            )
+        )
+
+        ratio_sequence = binning(
+            ratio_sequence.unsqueeze(-1),
+            kernel_size=int(config["binning_kernel_size"]),
+            stride=int(config["binning_stride"]),
+            divisor_override=None,
+        ).squeeze(-1)
+
+        mask_positve = (
+            binning(
+                mask_positve.unsqueeze(-1).unsqueeze(-1).type(dtype=dtype),
+                kernel_size=int(config["binning_kernel_size"]),
+                stride=int(config["binning_stride"]),
+                divisor_override=None,
+            )
+            .squeeze(-1)
+            .squeeze(-1)
+        )
+        mask_positve = (mask_positve > 0).type(torch.bool)
+
     if config["save_as_python"]:
         temp_path = os.path.join(
             config["export_path"], experiment_name + "_ratio_sequence.npz"
@@ -860,7 +892,7 @@ def process_trial(
         mylogger.info(f"ratio_sequence = h5read('{temp_path}','/ratio_sequence');")
         file_handle.close()
 
-    del ratio_sequence
+    # del ratio_sequence
     del mask_positve
     del mask_negative
 
@@ -869,6 +901,25 @@ def process_trial(
     mylogger.info("* TRIAL END ***********************************")
     mylogger.info("***********************************************")
     mylogger.info("")
+
+    file_handle = h5py.File("old.mat", "r")
+    old: np.ndarray = np.array(file_handle["ratioSequence"])  # type:ignore
+    # HDF5 loads everything backwards...
+    old = np.moveaxis(old, 0, -1)
+    old = np.moveaxis(old, 0, -2)
+
+    pos_x = 25
+    pos_y = 75
+
+    plt.figure(1)
+    new_select = ratio_sequence[pos_x, pos_y, :].cpu()
+    old_select = old[pos_x, pos_y, :]
+    plt.plot(new_select, "r", label="New")
+    plt.plot(old_select, "k", label="Old")
+    plt.title(f"Position: {pos_x}, {pos_y}")
+    plt.legend()
+    plt.show()
+
     return
 
 

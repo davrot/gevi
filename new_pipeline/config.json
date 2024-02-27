@@ -1,17 +1,12 @@
 {
     "basic_path": "/data_1/robert",
-    "recoding_data": "2021-05-05",
-    "mouse_identifier": "M3852M",
+    "recoding_data": "2020-12-08",
+    "mouse_identifier": "M3399M",
     "raw_path": "raw",
     "export_path": "output",
     "ref_image_path": "ref_images",
-    "required_order": [
-        "acceptor",
-        "donor",
-        "oxygenation",
-        "volume"
-    ],
-    "classical_ratio_mode": false, // true: a/d false: 1+a-d
+    // Ratio Sequence
+    "classical_ratio_mode": true, // true: a/d false: 1+a-d
     // Regression
     "target_camera_acceptor": "acceptor",
     "regressor_cameras_acceptor": [
@@ -25,6 +20,7 @@
     ],
     // binning
     "binning_enable": true,
+    "binning_at_the_end": false,
     "binning_kernel_size": 4,
     "binning_stride": 4,
     "binning_divisor_override": 1,
@@ -50,5 +46,12 @@
     "save_alignment": false,
     "save_heartbeat": false,
     "save_factors": false,
-    "save_regression_coefficients": false
+    "save_regression_coefficients": false,
+    // Not important parameter
+    "required_order": [
+        "acceptor",
+        "donor",
+        "oxygenation",
+        "volume"
+    ]
 }
