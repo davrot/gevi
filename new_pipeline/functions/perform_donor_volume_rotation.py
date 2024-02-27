@@ -16,6 +16,7 @@ def perform_donor_volume_rotation(
     ref_image_volume: torch.Tensor,
     image_alignment: ImageAlignment,
     batch_size: int,
+    config: dict,
     fill_value: float = 0,
 ) -> tuple[
     torch.Tensor,
@@ -43,8 +44,50 @@ def perform_donor_volume_rotation(
     )
 
     mylogger.info("Average over both rotations")
+
+    donor_threshold: torch.Tensor = torch.sort(torch.abs(angle_donor))[0]
+    donor_threshold = donor_threshold[
+        int(
+            donor_threshold.shape[0]
+            * float(config["rotation_stabilization_threshold_border"])
+        )
+    ] * float(config["rotation_stabilization_threshold_factor"])
+
+    volume_threshold: torch.Tensor = torch.sort(torch.abs(angle_volume))[0]
+    volume_threshold = volume_threshold[
+        int(
+            volume_threshold.shape[0]
+            * float(config["rotation_stabilization_threshold_border"])
+        )
+    ] * float(config["rotation_stabilization_threshold_factor"])
+
+    donor_idx = torch.where(torch.abs(angle_donor) > donor_threshold)[0]
+    volume_idx = torch.where(torch.abs(angle_volume) > volume_threshold)[0]
+    mylogger.info(
+        f"Border: {config['rotation_stabilization_threshold_border']}, "
+        f"factor {config['rotation_stabilization_threshold_factor']}  "
+    )
+    mylogger.info(
+        f"Donor threshold: {donor_threshold:.3e}, volume threshold: {volume_threshold:.3e}"
+    )
+    mylogger.info(
+        f"Found broken rotation values: "
+        f"donor {int(donor_idx.shape[0])}, "
+        f"volume {int(volume_idx.shape[0])}"
+    )
+    angle_donor[donor_idx] = angle_volume[donor_idx]
+    angle_volume[volume_idx] = angle_donor[volume_idx]
+
+    donor_idx = torch.where(torch.abs(angle_donor) > donor_threshold)[0]
+    volume_idx = torch.where(torch.abs(angle_volume) > volume_threshold)[0]
+    mylogger.info(
+        f"After fill in these broken rotation values remain: "
+        f"donor {int(donor_idx.shape[0])}, "
+        f"volume {int(volume_idx.shape[0])}"
+    )
+    angle_donor[donor_idx] = 0.0
+    angle_volume[volume_idx] = 0.0
     angle_donor_volume = (angle_donor + angle_volume) / 2.0
-    angle_donor_volume *= 0.0
 
     mylogger.info("Rotate acceptor data based on the average rotation")
     for frame_id in range(0, angle_donor_volume.shape[0]):
