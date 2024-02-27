@@ -120,7 +120,7 @@ def process_trial(
         free_mem: int = cuda_total_memory - max(
             [torch.cuda.memory_reserved(device), torch.cuda.memory_allocated(device)]
         )
-        mylogger.info(f"CUDA memory before loading RAW data: {free_mem//1024} MByte")
+        mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
 
     data_np: np.ndarray = np.load(filename_data, mmap_mode="r").astype(dtype_np)
     data: torch.Tensor = torch.zeros(data_np.shape, dtype=dtype, device=device)
@@ -133,10 +133,22 @@ def process_trial(
         free_mem = cuda_total_memory - max(
             [torch.cuda.memory_reserved(device), torch.cuda.memory_allocated(device)]
         )
-        mylogger.info(f"CUDA memory after loading RAW data: {free_mem//1024} MByte")
+        mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
 
     del data_np
     mylogger.info(f"Data shape: {data.shape}")
+    mylogger.info("-==- Done -==-")
+
+    mylogger.info("Finding limit values in the RAW data and mark them for masking")
+    limit: float = (2**16) - 1
+    for i in range(0, data.shape[3]):
+        zero_pixel_mask: torch.Tensor = torch.any(data[..., i] >= limit, dim=-1)
+        data[zero_pixel_mask, :, i] = -100.0
+        mylogger.info(
+            f"{meta_channels[i]}: "
+            f"found {int(zero_pixel_mask.type(dtype=dtype).sum())} pixel "
+            f"with limit values "
+        )
     mylogger.info("-==- Done -==-")
 
     mylogger.info("Reference images and mask")
@@ -281,7 +293,7 @@ def process_trial(
         ref_image_donor=ref_image_donor,
         image_alignment=image_alignment,
         batch_size=config["alignment_batch_size"],
-        fill_value=-1.0,
+        fill_value=-100.0,
     )
     mylogger.info(f"Rotation: {round(float(angle_refref[0]),2)} degree")
     mylogger.info(
@@ -308,7 +320,7 @@ def process_trial(
         scale=1.0,
         shear=0,
         interpolation=tv.transforms.InterpolationMode.BILINEAR,
-        fill=-1.0,
+        fill=-100.0,
     )
 
     ref_image_oxygenation = tv.transforms.functional.affine(
@@ -318,7 +330,7 @@ def process_trial(
         scale=1.0,
         shear=0,
         interpolation=tv.transforms.InterpolationMode.BILINEAR,
-        fill=-1.0,
+        fill=-100.0,
     ).squeeze(0)
     mylogger.info("-==- Done -==-")
 
@@ -336,7 +348,7 @@ def process_trial(
         scale=1.0,
         shear=0,
         interpolation=tv.transforms.InterpolationMode.BILINEAR,
-        fill=-1.0,
+        fill=-100.0,
     )
 
     mylogger.info("Translate acceptor")
@@ -347,7 +359,7 @@ def process_trial(
         scale=1.0,
         shear=0,
         interpolation=tv.transforms.InterpolationMode.BILINEAR,
-        fill=-1.0,
+        fill=-100.0,
     )
 
     mylogger.info("Rotate oxygenation")
@@ -358,7 +370,7 @@ def process_trial(
         scale=1.0,
         shear=0,
         interpolation=tv.transforms.InterpolationMode.BILINEAR,
-        fill=-1.0,
+        fill=-100.0,
     )
 
     mylogger.info("Translate oxygenation")
@@ -369,7 +381,7 @@ def process_trial(
         scale=1.0,
         shear=0,
         interpolation=tv.transforms.InterpolationMode.BILINEAR,
-        fill=-1.0,
+        fill=-100.0,
     )
     mylogger.info("-==- Done -==-")
 
@@ -392,7 +404,7 @@ def process_trial(
         ref_image_volume=ref_image_volume,
         image_alignment=image_alignment,
         batch_size=config["alignment_batch_size"],
-        fill_value=-1.0,
+        fill_value=-100.0,
     )
 
     mylogger.info(
@@ -427,7 +439,7 @@ def process_trial(
         ref_image_volume=ref_image_volume,
         image_alignment=image_alignment,
         batch_size=config["alignment_batch_size"],
-        fill_value=-1.0,
+        fill_value=-100.0,
     )
 
     mylogger.info(
@@ -448,6 +460,17 @@ def process_trial(
     )
     mylogger.info(f"Save translation vector to {temp_path}")
     np.save(temp_path, tvec_donor_volume.cpu())
+    mylogger.info("-==- Done -==-")
+
+    mylogger.info("Finding zeros values in the RAW data and mark them for masking")
+    for i in range(0, data.shape[0]):
+        zero_pixel_mask = torch.any(data[i, ...] == 0, dim=0)
+        data[i, :, zero_pixel_mask] = -100.0
+        mylogger.info(
+            f"{config['required_order'][i]}: "
+            f"found {int(zero_pixel_mask.type(dtype=dtype).sum())} pixel "
+            f"with zeros "
+        )
     mylogger.info("-==- Done -==-")
 
     mylogger.info("Update mask with the new regions due to alignment")
@@ -496,6 +519,14 @@ def process_trial(
     ].mean()
 
     del heartbeat_ts
+
+    if device != torch.device("cpu"):
+        torch.cuda.empty_cache()
+        mylogger.info("Empty CUDA cache")
+        free_mem = cuda_total_memory - max(
+            [torch.cuda.memory_reserved(device), torch.cuda.memory_allocated(device)]
+        )
+        mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
 
     temp_path = os.path.join(
         config["export_path"], experiment_name + "_volume_heartbeat.npy"
@@ -550,6 +581,14 @@ def process_trial(
     donor_heartbeat_factor = heartbeat_coefficients[donor_index, ...].clone()
     acceptor_heartbeat_factor = heartbeat_coefficients[acceptor_index, ...].clone()
     del heartbeat_coefficients
+
+    if device != torch.device("cpu"):
+        torch.cuda.empty_cache()
+        mylogger.info("Empty CUDA cache")
+        free_mem = cuda_total_memory - max(
+            [torch.cuda.memory_reserved(device), torch.cuda.memory_allocated(device)]
+        )
+        mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
 
     mylogger.info("Calculate scaling factor for donor and acceptor")
     donor_factor: torch.Tensor = (
@@ -636,12 +675,12 @@ def process_trial(
     mylogger.info("creating a copy of the data")
     data_filtered = data.clone().movedim(1, -1)
     if device != torch.device("cpu"):
+        torch.cuda.empty_cache()
+        mylogger.info("Empty CUDA cache")
         free_mem = cuda_total_memory - max(
             [torch.cuda.memory_reserved(device), torch.cuda.memory_allocated(device)]
         )
-        mylogger.info(
-            f"CUDA memory after reserving RAM for data_filtered: {free_mem//1024} MByte"
-        )
+        mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
 
     overwrite_fft_gauss: None | torch.Tensor = None
     for i in range(0, data_filtered.shape[0]):
@@ -670,17 +709,49 @@ def process_trial(
     mylogger.info("data_filtered is populated")
 
     if device != torch.device("cpu"):
+        torch.cuda.empty_cache()
+        mylogger.info("Empty CUDA cache")
         free_mem = cuda_total_memory - max(
             [torch.cuda.memory_reserved(device), torch.cuda.memory_allocated(device)]
         )
-        mylogger.info(
-            f"CUDA memory after data_filtered is populated: {free_mem//1024} MByte"
-        )
+        mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
 
     mylogger.info("-==- Done -==-")
 
     exit()
 
+    # if config["classical_ratio_mode"]:
+    #     ratio_sequence: torch.Tensor = data_acceptor / data_donor
+    #     ratio_sequence /= ratio_sequence.mean(dim=-1, keepdim=True)
+    # else:
+    #     ratio_sequence: torch.Tensor = 1 + data_acceptor - data_donor
+    # ratio_sequence = torch.nan_to_num(ratio_sequence, nan=0.0)
+
+    # if config["binning_enable"] and (config["binning_before_alignment"] is False):
+    #     mylogger.info("Binning of data")
+    #     mylogger.info(
+    #         (
+    #             f"kernel_size={int(config['binning_kernel_size'])},"
+    #             f"stride={int(config['binning_stride'])},"
+    #             f"divisor_override={int(config['binning_divisor_override'])}"
+    #         )
+    #     )
+    #     # dims... ?
+    #     ratio_sequence = binning(
+    #         ratio_sequence,
+    #         kernel_size=int(config["binning_kernel_size"]),
+    #         stride=int(config["binning_stride"]),
+    #         divisor_override=int(config["binning_divisor_override"]),
+    #     )
+    #     # dims... ?
+    #     mask = binning(
+    #         mask,
+    #         kernel_size=int(config["binning_kernel_size"]),
+    #         stride=int(config["binning_stride"]),
+    #         divisor_override=int(config["binning_divisor_override"]),
+    #     )
+
+    # save mask und ratio_sequence
     return
 
 

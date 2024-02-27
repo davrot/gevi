@@ -11,6 +11,18 @@
         "oxygenation",
         "volume"
     ],
+    "classical_ratio_mode": false, // true: a/d false: 1+a-d
+    // Regression
+    "target_camera_acceptor": "acceptor",
+    "regressor_cameras_acceptor": [
+        "oxygenation",
+        "volume"
+    ],
+    "target_camera_donor": "donor",
+    "regressor_cameras_donor": [
+        "oxygenation",
+        "volume"
+    ],
     // binning
     "binning_enable": true,
     "binning_before_alignment": false, // otherwise at the end after everything else
