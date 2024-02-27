@@ -306,17 +306,18 @@ def process_trial(
         f"Translation: {round(float(tvec_refref[0]),1)} x {round(float(tvec_refref[1]),1)} pixel"
     )
 
-    temp_path: str = os.path.join(
-        config["export_path"], experiment_name + "_angle_refref.npy"
-    )
-    mylogger.info(f"Save angle to {temp_path}")
-    np.save(temp_path, angle_refref.cpu())
+    if config["save_alignment"]:
+        temp_path: str = os.path.join(
+            config["export_path"], experiment_name + "_angle_refref.npy"
+        )
+        mylogger.info(f"Save angle to {temp_path}")
+        np.save(temp_path, angle_refref.cpu())
 
-    temp_path = os.path.join(
-        config["export_path"], experiment_name + "_tvec_refref.npy"
-    )
-    mylogger.info(f"Save translation vector to {temp_path}")
-    np.save(temp_path, tvec_refref.cpu())
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_tvec_refref.npy"
+        )
+        mylogger.info(f"Save translation vector to {temp_path}")
+        np.save(temp_path, tvec_refref.cpu())
 
     mylogger.info("Moving & rotating the oxygenation ref image")
     ref_image_oxygenation = tv.transforms.functional.affine(
@@ -420,11 +421,12 @@ def process_trial(
         f"mean {round(float(angle_donor_volume.mean()),2)} "
     )
 
-    temp_path = os.path.join(
-        config["export_path"], experiment_name + "_angle_donor_volume.npy"
-    )
-    mylogger.info(f"Save angles to {temp_path}")
-    np.save(temp_path, angle_donor_volume.cpu())
+    if config["save_alignment"]:
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_angle_donor_volume.npy"
+        )
+        mylogger.info(f"Save angles to {temp_path}")
+        np.save(temp_path, angle_donor_volume.cpu())
     mylogger.info("-==- Done -==-")
 
     mylogger.info("Perform translation between donor and volume and its ref images")
@@ -460,12 +462,12 @@ def process_trial(
         f"max {round(float(tvec_donor_volume[:,1].max()),1)} "
         f"mean {round(float(tvec_donor_volume[:,1].mean()),1)} "
     )
-
-    temp_path = os.path.join(
-        config["export_path"], experiment_name + "_tvec_donor_volume.npy"
-    )
-    mylogger.info(f"Save translation vector to {temp_path}")
-    np.save(temp_path, tvec_donor_volume.cpu())
+    if config["save_alignment"]:
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_tvec_donor_volume.npy"
+        )
+        mylogger.info(f"Save translation vector to {temp_path}")
+        np.save(temp_path, tvec_donor_volume.cpu())
     mylogger.info("-==- Done -==-")
 
     mylogger.info("Finding zeros values in the RAW data and mark them for masking")
@@ -536,11 +538,12 @@ def process_trial(
         )
         mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
 
-    temp_path = os.path.join(
-        config["export_path"], experiment_name + "_volume_heartbeat.npy"
-    )
-    mylogger.info(f"Save volume heartbeat to {temp_path}")
-    np.save(temp_path, volume_heartbeat.cpu())
+    if config["save_heartbeat"]:
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_volume_heartbeat.npy"
+        )
+        mylogger.info(f"Save volume heartbeat to {temp_path}")
+        np.save(temp_path, volume_heartbeat.cpu())
     mylogger.info("-==- Done -==-")
 
     volume_heartbeat = volume_heartbeat.unsqueeze(0).unsqueeze(0)
@@ -573,11 +576,12 @@ def process_trial(
         )
     del y
 
-    temp_path = os.path.join(
-        config["export_path"], experiment_name + "_heartbeat_coefficients.npy"
-    )
-    mylogger.info(f"Save heartbeat coefficients to {temp_path}")
-    np.save(temp_path, heartbeat_coefficients.cpu())
+    if config["save_heartbeat"]:
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_heartbeat_coefficients.npy"
+        )
+        mylogger.info(f"Save heartbeat coefficients to {temp_path}")
+        np.save(temp_path, heartbeat_coefficients.cpu())
     mylogger.info("-==- Done -==-")
 
     mylogger.info("Remove heart beat from data")
@@ -609,17 +613,18 @@ def process_trial(
     del donor_heartbeat_factor
     del acceptor_heartbeat_factor
 
-    temp_path = os.path.join(
-        config["export_path"], experiment_name + "_donor_factor.npy"
-    )
-    mylogger.info(f"Save donor factor to {temp_path}")
-    np.save(temp_path, donor_factor.cpu())
+    if config["save_factors"]:
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_donor_factor.npy"
+        )
+        mylogger.info(f"Save donor factor to {temp_path}")
+        np.save(temp_path, donor_factor.cpu())
 
-    temp_path = os.path.join(
-        config["export_path"], experiment_name + "_acceptor_factor.npy"
-    )
-    mylogger.info(f"Save acceptor factor to {temp_path}")
-    np.save(temp_path, acceptor_factor.cpu())
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_acceptor_factor.npy"
+        )
+        mylogger.info(f"Save acceptor factor to {temp_path}")
+        np.save(temp_path, acceptor_factor.cpu())
     mylogger.info("-==- Done -==-")
 
     mylogger.info("Scale acceptor to heart beat amplitude")
@@ -754,11 +759,12 @@ def process_trial(
         first_none_ramp_frame=int(config["skip_frames_in_the_beginning"]),
     )
 
-    temp_path = os.path.join(
-        config["export_path"], experiment_name + "_coefficients_acceptor.npy"
-    )
-    mylogger.info(f"Save acceptor coefficients to {temp_path}")
-    np.save(temp_path, coefficients_acceptor.cpu())
+    if config["save_regression_coefficients"]:
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_coefficients_acceptor.npy"
+        )
+        mylogger.info(f"Save acceptor coefficients to {temp_path}")
+        np.save(temp_path, coefficients_acceptor.cpu())
     del coefficients_acceptor
 
     mylogger.info("-==- Done -==-")
@@ -785,11 +791,12 @@ def process_trial(
         first_none_ramp_frame=int(config["skip_frames_in_the_beginning"]),
     )
 
-    temp_path = os.path.join(
-        config["export_path"], experiment_name + "_coefficients_donor.npy"
-    )
-    mylogger.info(f"Save acceptor donor to {temp_path}")
-    np.save(temp_path, coefficients_donor.cpu())
+    if config["save_regression_coefficients"]:
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_coefficients_donor.npy"
+        )
+        mylogger.info(f"Save acceptor donor to {temp_path}")
+        np.save(temp_path, coefficients_donor.cpu())
     del coefficients_donor
     mylogger.info("-==- Done -==-")
 
@@ -822,7 +829,7 @@ def process_trial(
         temp_path = os.path.join(
             config["export_path"], experiment_name + "_ratio_sequence.npz"
         )
-        mylogger.info(f"Save ratio_sequence to {temp_path}")
+        mylogger.info(f"Save ratio_sequence and mask to {temp_path}")
         np.savez_compressed(
             temp_path, ratio_sequence=ratio_sequence.cpu(), mask=mask_positve.cpu()
         )
@@ -831,13 +838,16 @@ def process_trial(
         temp_path = os.path.join(
             config["export_path"], experiment_name + "_ratio_sequence.hd5"
         )
-        mylogger.info(f"Save ratio_sequence to {temp_path}")
+        mylogger.info(f"Save ratio_sequence and mask to {temp_path}")
         file_handle = h5py.File(temp_path, "w")
 
         mask_positve = mask_positve.movedim(0, -1)
         ratio_sequence = ratio_sequence.movedim(1, -1).movedim(0, -1)
         _ = file_handle.create_dataset(
-            "mask", data=mask_positve.cpu(), compression="gzip", compression_opts=9
+            "mask",
+            data=mask_positve.type(torch.uint8).cpu(),
+            compression="gzip",
+            compression_opts=9,
         )
         _ = file_handle.create_dataset(
             "ratio_sequence",
@@ -845,6 +855,9 @@ def process_trial(
             compression="gzip",
             compression_opts=9,
         )
+        mylogger.info("Reminder: How to read with matlab:")
+        mylogger.info(f"mask = h5read('{temp_path}','/mask');")
+        mylogger.info(f"ratio_sequence = h5read('{temp_path}','/ratio_sequence');")
         file_handle.close()
 
     del ratio_sequence

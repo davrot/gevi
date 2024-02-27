@@ -4,8 +4,6 @@
     "mouse_identifier": "M3852M",
     "raw_path": "raw",
     "export_path": "output",
-    "save_as_python": true,
-    "save_as_matlab": true,
     "ref_image_path": "ref_images",
     "required_order": [
         "acceptor",
@@ -44,5 +42,13 @@
     "skip_frames_in_the_beginning": 100, // Frames
     // PyTorch
     "dtype": "float32",
-    "force_to_cpu": false
+    "force_to_cpu": false,
+    // Save
+    "save_as_python": true, // produces .npz files (compressed)
+    "save_as_matlab": false, // produces .hd5 file (compressed)
+    // Save extra information
+    "save_alignment": false,
+    "save_heartbeat": false,
+    "save_factors": false,
+    "save_regression_coefficients": false
 }
