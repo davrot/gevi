@@ -1,6 +1,5 @@
-# TODO: Problem 1: Rotation over time instable
-# TODO: Problem 2: I am only processing trials with one part
-# The latter on is no real problem. I just need an example...
+# TODO: I am only processing trials with one part
+# The latter one is no real problem. I just need an example...
 
 import numpy as np
 import torch
@@ -432,6 +431,7 @@ def process_trial(
         image_alignment=image_alignment,
         batch_size=config["alignment_batch_size"],
         fill_value=-100.0,
+        config=config,
     )
 
     mylogger.info(
@@ -468,6 +468,7 @@ def process_trial(
         image_alignment=image_alignment,
         batch_size=config["alignment_batch_size"],
         fill_value=-100.0,
+        config=config,
     )
 
     mylogger.info(

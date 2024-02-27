@@ -1,7 +1,7 @@
 {
     "basic_path": "/data_1/robert",
-    "recoding_data": "2020-12-08",
-    "mouse_identifier": "M3399M",
+    "recoding_data": "2021-10-05",
+    "mouse_identifier": "M3879M",
     "raw_path": "raw",
     "export_path": "output",
     "ref_image_path": "ref_images",
@@ -20,12 +20,14 @@
     ],
     // binning
     "binning_enable": true,
-    "binning_at_the_end": false,
+    "binning_at_the_end": true,
     "binning_kernel_size": 4,
     "binning_stride": 4,
     "binning_divisor_override": 1,
     // alignment
     "alignment_batch_size": 200,
+    "rotation_stabilization_threshold_factor": 3.0, // >= 1.0
+    "rotation_stabilization_threshold_border": 0.9, // <= 1.0
     // Heart beat detection
     "lower_freqency_bandpass": 5.0, // Hz
     "upper_freqency_bandpass": 14.0, // Hz
