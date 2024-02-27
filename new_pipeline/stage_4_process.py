@@ -4,12 +4,12 @@ import torchvision as tv  # type: ignore
 
 import os
 import logging
+import h5py
 
 from functions.create_logger import create_logger
 from functions.get_torch_device import get_torch_device
 from functions.load_config import load_config
 from functions.load_meta_data import load_meta_data
-
 from functions.get_experiments import get_experiments
 from functions.get_trials import get_trials
 from functions.get_parts import get_parts
@@ -20,8 +20,7 @@ from functions.perform_donor_volume_rotation import perform_donor_volume_rotatio
 from functions.perform_donor_volume_translation import perform_donor_volume_translation
 from functions.bandpass import bandpass
 from functions.gauss_smear_individual import gauss_smear_individual
-
-import matplotlib.pyplot as plt
+from functions.regression import regression
 
 
 @torch.no_grad()
@@ -32,6 +31,13 @@ def process_trial(
     trial_id: int,
     device: torch.device,
 ):
+
+    mylogger.info("")
+    mylogger.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    mylogger.info("~ TRIAL START ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    mylogger.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    mylogger.info("")
+
     if device != torch.device("cpu"):
         torch.cuda.empty_cache()
         mylogger.info("Empty CUDA cache")
@@ -206,7 +212,7 @@ def process_trial(
     )
     mylogger.info("-==- Done -==-")
 
-    if config["binning_enable"] and config["binning_before_alignment"]:
+    if config["binning_enable"]:
         mylogger.info("Binning of data")
         mylogger.info(
             (
@@ -478,7 +484,9 @@ def process_trial(
     new_mask_area: torch.Tensor = torch.any(torch.any(data < -0.1, dim=0), dim=0).bool()
     mask = (mask == 0).bool()
     mask = torch.logical_or(mask, new_mask_area)
+    mask_negative: torch.Tensor = mask.clone()
     mask_positve: torch.Tensor = torch.logical_not(mask)
+    del mask
 
     mylogger.info("Update the data with the new mask")
     data *= mask_positve.unsqueeze(0).unsqueeze(0).type(dtype=dtype)
@@ -619,10 +627,13 @@ def process_trial(
     mean_values_acceptor = data[
         acceptor_index, config["skip_frames_in_the_beginning"] :, ...
     ].nanmean(dim=0, keepdim=True)
+
     mylogger.info("Remove mean")
     data[acceptor_index, ...] -= mean_values_acceptor
     mylogger.info("Apply acceptor_factor and mask")
-    data[acceptor_index, ...] *= acceptor_factor.unsqueeze(0) * mask.unsqueeze(0)
+    data[acceptor_index, ...] *= acceptor_factor.unsqueeze(0) * mask_positve.unsqueeze(
+        0
+    )
     mylogger.info("Add mean")
     data[acceptor_index, ...] += mean_values_acceptor
     mylogger.info("-==- Done -==-")
@@ -635,7 +646,7 @@ def process_trial(
     mylogger.info("Remove mean")
     data[donor_index, ...] -= mean_values_donor
     mylogger.info("Apply donor_factor and mask")
-    data[donor_index, ...] *= donor_factor.unsqueeze(0) * mask.unsqueeze(0)
+    data[donor_index, ...] *= donor_factor.unsqueeze(0) * mask_positve.unsqueeze(0)
     mylogger.info("Add mean")
     data[donor_index, ...] += mean_values_donor
     mylogger.info("-==- Done -==-")
@@ -651,7 +662,7 @@ def process_trial(
     mylogger.info("Preparation for regression -- Gauss smear")
     spatial_width = float(config["gauss_smear_spatial_width"])
 
-    if config["binning_enable"] and config["binning_before_alignment"]:
+    if config["binning_enable"]:
         spatial_width /= float(config["binning_kernel_size"])
 
     mylogger.info(
@@ -715,43 +726,136 @@ def process_trial(
             [torch.cuda.memory_reserved(device), torch.cuda.memory_allocated(device)]
         )
         mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
+    mylogger.info("-==- Done -==-")
+
+    mylogger.info("Preperation for Regression")
+    mylogger.info("Move time dimensions of data to the last dimension")
+    data = data.movedim(1, -1)
+
+    mylogger.info("Regression Acceptor")
+    mylogger.info(f"Target: {config['target_camera_acceptor']}")
+    mylogger.info(
+        f"Regressors: constant, linear and {config['regressor_cameras_acceptor']}"
+    )
+    target_id: int = config["required_order"].index(config["target_camera_acceptor"])
+    regressor_id: list[int] = []
+    for i in range(0, len(config["regressor_cameras_acceptor"])):
+        regressor_id.append(
+            config["required_order"].index(config["regressor_cameras_acceptor"][i])
+        )
+
+    data_acceptor, coefficients_acceptor = regression(
+        mylogger=mylogger,
+        target_camera_id=target_id,
+        regressor_camera_ids=regressor_id,
+        mask=mask_negative,
+        data=data,
+        data_filtered=data_filtered,
+        first_none_ramp_frame=int(config["skip_frames_in_the_beginning"]),
+    )
+
+    temp_path = os.path.join(
+        config["export_path"], experiment_name + "_coefficients_acceptor.npy"
+    )
+    mylogger.info(f"Save acceptor coefficients to {temp_path}")
+    np.save(temp_path, coefficients_acceptor.cpu())
+    del coefficients_acceptor
 
     mylogger.info("-==- Done -==-")
 
-    exit()
+    mylogger.info("Regression Donor")
+    mylogger.info(f"Target: {config['target_camera_donor']}")
+    mylogger.info(
+        f"Regressors: constant, linear and {config['regressor_cameras_donor']}"
+    )
+    target_id = config["required_order"].index(config["target_camera_donor"])
+    regressor_id = []
+    for i in range(0, len(config["regressor_cameras_donor"])):
+        regressor_id.append(
+            config["required_order"].index(config["regressor_cameras_donor"][i])
+        )
 
-    # if config["classical_ratio_mode"]:
-    #     ratio_sequence: torch.Tensor = data_acceptor / data_donor
-    #     ratio_sequence /= ratio_sequence.mean(dim=-1, keepdim=True)
-    # else:
-    #     ratio_sequence: torch.Tensor = 1 + data_acceptor - data_donor
-    # ratio_sequence = torch.nan_to_num(ratio_sequence, nan=0.0)
+    data_donor, coefficients_donor = regression(
+        mylogger=mylogger,
+        target_camera_id=target_id,
+        regressor_camera_ids=regressor_id,
+        mask=mask_negative,
+        data=data,
+        data_filtered=data_filtered,
+        first_none_ramp_frame=int(config["skip_frames_in_the_beginning"]),
+    )
 
-    # if config["binning_enable"] and (config["binning_before_alignment"] is False):
-    #     mylogger.info("Binning of data")
-    #     mylogger.info(
-    #         (
-    #             f"kernel_size={int(config['binning_kernel_size'])},"
-    #             f"stride={int(config['binning_stride'])},"
-    #             f"divisor_override={int(config['binning_divisor_override'])}"
-    #         )
-    #     )
-    #     # dims... ?
-    #     ratio_sequence = binning(
-    #         ratio_sequence,
-    #         kernel_size=int(config["binning_kernel_size"]),
-    #         stride=int(config["binning_stride"]),
-    #         divisor_override=int(config["binning_divisor_override"]),
-    #     )
-    #     # dims... ?
-    #     mask = binning(
-    #         mask,
-    #         kernel_size=int(config["binning_kernel_size"]),
-    #         stride=int(config["binning_stride"]),
-    #         divisor_override=int(config["binning_divisor_override"]),
-    #     )
+    temp_path = os.path.join(
+        config["export_path"], experiment_name + "_coefficients_donor.npy"
+    )
+    mylogger.info(f"Save acceptor donor to {temp_path}")
+    np.save(temp_path, coefficients_donor.cpu())
+    del coefficients_donor
+    mylogger.info("-==- Done -==-")
 
-    # save mask und ratio_sequence
+    del data
+    del data_filtered
+
+    if device != torch.device("cpu"):
+        torch.cuda.empty_cache()
+        mylogger.info("Empty CUDA cache")
+        free_mem = cuda_total_memory - max(
+            [torch.cuda.memory_reserved(device), torch.cuda.memory_allocated(device)]
+        )
+        mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
+
+    mylogger.info("Calculate ratio sequence")
+    if config["classical_ratio_mode"]:
+        mylogger.info("via acceptor / donor")
+        ratio_sequence: torch.Tensor = data_acceptor / data_donor
+        mylogger.info("via / mean over time")
+        ratio_sequence /= ratio_sequence.mean(dim=-1, keepdim=True)
+    else:
+        mylogger.info("via 1.0 + acceptor - donor")
+        ratio_sequence = 1.0 + data_acceptor - data_donor
+
+    mylogger.info("Remove nan")
+    ratio_sequence = torch.nan_to_num(ratio_sequence, nan=0.0)
+    mylogger.info("-==- Done -==-")
+
+    if config["save_as_python"]:
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_ratio_sequence.npz"
+        )
+        mylogger.info(f"Save ratio_sequence to {temp_path}")
+        np.savez_compressed(
+            temp_path, ratio_sequence=ratio_sequence.cpu(), mask=mask_positve.cpu()
+        )
+
+    if config["save_as_matlab"]:
+        temp_path = os.path.join(
+            config["export_path"], experiment_name + "_ratio_sequence.hd5"
+        )
+        mylogger.info(f"Save ratio_sequence to {temp_path}")
+        file_handle = h5py.File(temp_path, "w")
+
+        mask_positve = mask_positve.movedim(0, -1)
+        ratio_sequence = ratio_sequence.movedim(1, -1).movedim(0, -1)
+        _ = file_handle.create_dataset(
+            "mask", data=mask_positve.cpu(), compression="gzip", compression_opts=9
+        )
+        _ = file_handle.create_dataset(
+            "ratio_sequence",
+            data=ratio_sequence.cpu(),
+            compression="gzip",
+            compression_opts=9,
+        )
+        file_handle.close()
+
+    del ratio_sequence
+    del mask_positve
+    del mask_negative
+
+    mylogger.info("")
+    mylogger.info("***********************************************")
+    mylogger.info("* TRIAL END ***********************************")
+    mylogger.info("***********************************************")
+    mylogger.info("")
     return
 
 
@@ -759,6 +863,13 @@ mylogger = create_logger(
     save_logging_messages=True, display_logging_messages=True, log_stage_name="stage_4"
 )
 config = load_config(mylogger=mylogger)
+
+if (config["save_as_python"] is False) and (config["save_as_matlab"] is False):
+    mylogger.info("No output will be created. ")
+    mylogger.info("Change save_as_python and/or save_as_matlab in the config file")
+    mylogger.info("ERROR: STOP!!!")
+    exit()
+
 device = get_torch_device(mylogger, config["force_to_cpu"])
 
 mylogger.info(f"Create directory {config['export_path']} in the case it does not exist")

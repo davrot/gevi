@@ -4,6 +4,8 @@
     "mouse_identifier": "M3852M",
     "raw_path": "raw",
     "export_path": "output",
+    "save_as_python": true,
+    "save_as_matlab": true,
     "ref_image_path": "ref_images",
     "required_order": [
         "acceptor",
@@ -25,7 +27,6 @@
     ],
     // binning
     "binning_enable": true,
-    "binning_before_alignment": false, // otherwise at the end after everything else
     "binning_kernel_size": 4,
     "binning_stride": 4,
     "binning_divisor_override": 1,
