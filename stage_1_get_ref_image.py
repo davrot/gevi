@@ -111,7 +111,6 @@ for i in range(0, len(meta_channels)):
 
     heartbeat_ts: torch.Tensor = bandpass(
         data=data[..., i],
-        device=data.device,
         low_frequency=config["lower_freqency_bandpass"],
         high_frequency=config["upper_freqency_bandpass"],
         fs=sample_frequency,
