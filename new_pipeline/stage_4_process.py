@@ -1,6 +1,3 @@
-# TODO: I am only processing trials with one part
-# The latter one is no real problem. I just need an example...
-
 import numpy as np
 import torch
 import torchvision as tv  # type: ignore
@@ -12,10 +9,8 @@ import h5py  # type: ignore
 from functions.create_logger import create_logger
 from functions.get_torch_device import get_torch_device
 from functions.load_config import load_config
-from functions.load_meta_data import load_meta_data
 from functions.get_experiments import get_experiments
 from functions.get_trials import get_trials
-from functions.get_parts import get_parts
 from functions.binning import binning
 from functions.ImageAlignment import ImageAlignment
 from functions.align_refref import align_refref
@@ -24,6 +19,7 @@ from functions.perform_donor_volume_translation import perform_donor_volume_tran
 from functions.bandpass import bandpass
 from functions.gauss_smear_individual import gauss_smear_individual
 from functions.regression import regression
+from functions.data_raw_loader import data_raw_loader
 
 
 @torch.no_grad()
@@ -57,46 +53,10 @@ def process_trial(
         config["raw_path"],
     )
 
-    if os.path.isdir(raw_data_path) is False:
-        mylogger.info(f"ERROR: could not find raw directory {raw_data_path}!!!!")
-        return
-
-    if (torch.where(get_experiments(raw_data_path) == experiment_id)[0].shape[0]) != 1:
-        mylogger.info(f"ERROR: could not find experiment id {experiment_id}!!!!")
-        return
-
-    if (
-        torch.where(get_trials(raw_data_path, experiment_id) == trial_id)[0].shape[0]
-    ) != 1:
-        mylogger.info(f"ERROR: could not find trial id {trial_id}!!!!")
-        return
-
-    if get_parts(raw_data_path, experiment_id, trial_id).shape[0] != 1:
-        mylogger.info("ERROR: this has more than one part. NOT IMPLEMENTED YET!!!!")
-        assert get_parts(raw_data_path, experiment_id, trial_id).shape[0] == 1
-    part_id: int = 1
-
-    experiment_name = f"Exp{experiment_id:03d}_Trial{trial_id:03d}"
-    mylogger.info(f"Will work on: {experiment_name}")
-
-    filename_data: str = os.path.join(
-        raw_data_path,
-        f"Exp{experiment_id:03d}_Trial{trial_id:03d}_Part{part_id:03d}.npy",
-    )
-
-    mylogger.info(f"Will use: {filename_data} for data")
-
-    filename_meta: str = os.path.join(
-        raw_data_path,
-        f"Exp{experiment_id:03d}_Trial{trial_id:03d}_Part{part_id:03d}_meta.txt",
-    )
-
-    mylogger.info(f"Will use: {filename_meta} for meta data")
-
-    if os.path.isfile(filename_meta) is False:
-        mylogger.info(f"Could not load meta data... {filename_meta}")
-        mylogger.info(f"ERROR: skipping {experiment_name}!!!!")
-        return
+    if config["binning_enable"] and (config["binning_at_the_end"] is False):
+        force_to_cpu_memory: bool = True
+    else:
+        force_to_cpu_memory = False
 
     meta_channels: list[str]
     meta_mouse_markings: str
@@ -106,6 +66,7 @@ def process_trial(
     meta_trial_recording_duration: float
     meta_frame_time: float
     meta_mouse: str
+    data: torch.Tensor
 
     (
         meta_channels,
@@ -116,43 +77,22 @@ def process_trial(
         meta_trial_recording_duration,
         meta_frame_time,
         meta_mouse,
-    ) = load_meta_data(mylogger=mylogger, filename_meta=filename_meta)
+        data,
+    ) = data_raw_loader(
+        raw_data_path=raw_data_path,
+        mylogger=mylogger,
+        experiment_id=experiment_id,
+        trial_id=trial_id,
+        device=device,
+        force_to_cpu_memory=force_to_cpu_memory,
+        config=config,
+    )
+    experiment_name: str = f"Exp{experiment_id:03d}_Trial{trial_id:03d}"
 
     dtype_str = config["dtype"]
-    mylogger.info(f"Data precision will be {dtype_str}")
-    dtype: torch.dtype = getattr(torch, dtype_str)
     dtype_np: np.dtype = getattr(np, dtype_str)
 
-    mylogger.info("Loading raw data")
-
-    if device != torch.device("cpu"):
-        free_mem: int = cuda_total_memory - max(
-            [torch.cuda.memory_reserved(device), torch.cuda.memory_allocated(device)]
-        )
-        mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
-
-    data_np: np.ndarray = np.load(filename_data, mmap_mode="r").astype(dtype_np)
-    if config["binning_enable"] and (config["binning_at_the_end"] is False):
-
-        data: torch.Tensor = torch.zeros(
-            data_np.shape, dtype=dtype, device=torch.device("cpu")
-        )
-        for i in range(0, len(config["required_order"])):
-            mylogger.info(
-                f"Move raw data to PyTorch CPU device: {config['required_order'][i]}"
-            )
-            idx = meta_channels.index(config["required_order"][i])
-            data[..., i] = torch.tensor(
-                data_np[..., idx], dtype=dtype, device=torch.device("cpu")
-            )
-    else:
-        data = torch.zeros(data_np.shape, dtype=dtype, device=device)
-        for i in range(0, len(config["required_order"])):
-            mylogger.info(
-                f"Move raw data to PyTorch device: {config['required_order'][i]}"
-            )
-            idx = meta_channels.index(config["required_order"][i])
-            data[..., i] = torch.tensor(data_np[..., idx], dtype=dtype, device=device)
+    dtype: torch.dtype = data.dtype
 
     if device != torch.device("cpu"):
         free_mem = cuda_total_memory - max(
@@ -160,7 +100,6 @@ def process_trial(
         )
         mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
 
-    del data_np
     mylogger.info(f"Data shape: {data.shape}")
     mylogger.info("-==- Done -==-")
 
@@ -183,6 +122,7 @@ def process_trial(
     ref_image_path_acceptor: str = os.path.join(ref_image_path, "acceptor.npy")
     if os.path.isfile(ref_image_path_acceptor) is False:
         mylogger.info(f"Could not load ref file: {ref_image_path_acceptor}")
+        assert os.path.isfile(ref_image_path_acceptor)
         return
 
     mylogger.info(f"Loading ref file data: {ref_image_path_acceptor}")
@@ -193,6 +133,7 @@ def process_trial(
     ref_image_path_donor: str = os.path.join(ref_image_path, "donor.npy")
     if os.path.isfile(ref_image_path_donor) is False:
         mylogger.info(f"Could not load ref file: {ref_image_path_donor}")
+        assert os.path.isfile(ref_image_path_donor)
         return
 
     mylogger.info(f"Loading ref file data: {ref_image_path_donor}")
@@ -203,6 +144,7 @@ def process_trial(
     ref_image_path_oxygenation: str = os.path.join(ref_image_path, "oxygenation.npy")
     if os.path.isfile(ref_image_path_oxygenation) is False:
         mylogger.info(f"Could not load ref file: {ref_image_path_oxygenation}")
+        assert os.path.isfile(ref_image_path_oxygenation)
         return
 
     mylogger.info(f"Loading ref file data: {ref_image_path_oxygenation}")
@@ -213,6 +155,7 @@ def process_trial(
     ref_image_path_volume: str = os.path.join(ref_image_path, "volume.npy")
     if os.path.isfile(ref_image_path_volume) is False:
         mylogger.info(f"Could not load ref file: {ref_image_path_volume}")
+        assert os.path.isfile(ref_image_path_volume)
         return
 
     mylogger.info(f"Loading ref file data: {ref_image_path_volume}")
@@ -223,6 +166,7 @@ def process_trial(
     refined_mask_file: str = os.path.join(ref_image_path, "mask_not_rotated.npy")
     if os.path.isfile(refined_mask_file) is False:
         mylogger.info(f"Could not load mask file: {refined_mask_file}")
+        assert os.path.isfile(refined_mask_file)
         return
 
     mylogger.info(f"Loading mask file data: {refined_mask_file}")

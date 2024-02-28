@@ -1,7 +1,10 @@
 {
-    "basic_path": "/data_1/robert",
-    "recoding_data": "2021-10-05",
-    "mouse_identifier": "M3879M",
+    "basic_path": "/data_1/hendrik",
+    "recoding_data": "2021-06-17",
+    "mouse_identifier": "M3859M",
+    //"basic_path": "/data_1/robert",
+    //"recoding_data": "2021-10-05",
+    //"mouse_identifier": "M3879M",
     "raw_path": "raw",
     "export_path": "output",
     "ref_image_path": "ref_images",

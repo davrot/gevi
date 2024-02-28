@@ -6,7 +6,7 @@ import matplotlib
 from matplotlib.widgets import Button  # type:ignore
 
 # pip install roipoly
-from roipoly import RoiPoly
+from roipoly import RoiPoly  # type:ignore
 
 from functions.create_logger import create_logger
 from functions.get_torch_device import get_torch_device
