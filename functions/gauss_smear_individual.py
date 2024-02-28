@@ -11,6 +11,47 @@ def gauss_smear_individual(
     use_matlab_mask: bool = True,
     epsilon: float = float(torch.finfo(torch.float64).eps),
 ) -> tuple[torch.Tensor, torch.Tensor]:
+    try:
+        return gauss_smear_individual_core(
+            input=input,
+            spatial_width=spatial_width,
+            temporal_width=temporal_width,
+            overwrite_fft_gauss=overwrite_fft_gauss,
+            use_matlab_mask=use_matlab_mask,
+            epsilon=epsilon,
+        )
+    except torch.cuda.OutOfMemoryError:
+
+        if overwrite_fft_gauss is None:
+            overwrite_fft_gauss_cpu: None | torch.Tensor = None
+        else:
+            overwrite_fft_gauss_cpu = overwrite_fft_gauss.cpu()
+
+        input_cpu: torch.Tensor = input.cpu()
+
+        output, overwrite_fft_gauss = gauss_smear_individual_core(
+            input=input_cpu,
+            spatial_width=spatial_width,
+            temporal_width=temporal_width,
+            overwrite_fft_gauss=overwrite_fft_gauss_cpu,
+            use_matlab_mask=use_matlab_mask,
+            epsilon=epsilon,
+        )
+        return (
+            output.to(device=input.device),
+            overwrite_fft_gauss.to(device=input.device),
+        )
+
+
+@torch.no_grad()
+def gauss_smear_individual_core(
+    input: torch.Tensor,
+    spatial_width: float,
+    temporal_width: float,
+    overwrite_fft_gauss: None | torch.Tensor = None,
+    use_matlab_mask: bool = True,
+    epsilon: float = float(torch.finfo(torch.float64).eps),
+) -> tuple[torch.Tensor, torch.Tensor]:
 
     dim_x: int = int(2 * math.ceil(2 * spatial_width) + 1)
     dim_y: int = int(2 * math.ceil(2 * spatial_width) + 1)

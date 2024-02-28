@@ -15,7 +15,6 @@ def perform_donor_volume_translation(
     volume: torch.Tensor,
     ref_image_donor: torch.Tensor,
     ref_image_volume: torch.Tensor,
-    image_alignment: ImageAlignment,
     batch_size: int,
     config: dict,
     fill_value: float = 0,
@@ -26,6 +25,74 @@ def perform_donor_volume_translation(
     torch.Tensor,
     torch.Tensor,
 ]:
+    try:
+
+        return perform_donor_volume_translation_internal(
+            mylogger=mylogger,
+            acceptor=acceptor,
+            donor=donor,
+            oxygenation=oxygenation,
+            volume=volume,
+            ref_image_donor=ref_image_donor,
+            ref_image_volume=ref_image_volume,
+            batch_size=batch_size,
+            config=config,
+            fill_value=fill_value,
+        )
+
+    except torch.cuda.OutOfMemoryError:
+
+        (
+            acceptor_cpu,
+            donor_cpu,
+            oxygenation_cpu,
+            volume_cpu,
+            tvec_donor_volume_cpu,
+        ) = perform_donor_volume_translation_internal(
+            mylogger=mylogger,
+            acceptor=acceptor.cpu(),
+            donor=donor.cpu(),
+            oxygenation=oxygenation.cpu(),
+            volume=volume.cpu(),
+            ref_image_donor=ref_image_donor.cpu(),
+            ref_image_volume=ref_image_volume.cpu(),
+            batch_size=batch_size,
+            config=config,
+            fill_value=fill_value,
+        )
+
+        return (
+            acceptor_cpu.to(device=acceptor.device),
+            donor_cpu.to(device=acceptor.device),
+            oxygenation_cpu.to(device=acceptor.device),
+            volume_cpu.to(device=acceptor.device),
+            tvec_donor_volume_cpu.to(device=acceptor.device),
+        )
+
+
+@torch.no_grad()
+def perform_donor_volume_translation_internal(
+    mylogger: logging.Logger,
+    acceptor: torch.Tensor,
+    donor: torch.Tensor,
+    oxygenation: torch.Tensor,
+    volume: torch.Tensor,
+    ref_image_donor: torch.Tensor,
+    ref_image_volume: torch.Tensor,
+    batch_size: int,
+    config: dict,
+    fill_value: float = 0,
+) -> tuple[
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+]:
+
+    image_alignment = ImageAlignment(
+        default_dtype=acceptor.dtype, device=acceptor.device
+    )
 
     mylogger.info("Calculate translation between donor data and donor ref image")
     tvec_donor = calculate_translation(

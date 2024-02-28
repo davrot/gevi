@@ -57,21 +57,49 @@ def chunk_iterator(array: torch.Tensor, chunk_size: int):
 @torch.no_grad()
 def bandpass(
     data: torch.Tensor,
-    device: torch.device,
+    low_frequency: float = 0.1,
+    high_frequency: float = 1.0,
+    fs=30.0,
+    filtfilt_chuck_size: int = 10,
+) -> torch.Tensor:
+
+    try:
+        return bandpass_internal(
+            data=data,
+            low_frequency=low_frequency,
+            high_frequency=high_frequency,
+            fs=fs,
+            filtfilt_chuck_size=filtfilt_chuck_size,
+        )
+
+    except torch.cuda.OutOfMemoryError:
+
+        return bandpass_internal(
+            data=data.cpu(),
+            low_frequency=low_frequency,
+            high_frequency=high_frequency,
+            fs=fs,
+            filtfilt_chuck_size=filtfilt_chuck_size,
+        ).to(device=data.device)
+
+
+@torch.no_grad()
+def bandpass_internal(
+    data: torch.Tensor,
     low_frequency: float = 0.1,
     high_frequency: float = 1.0,
     fs=30.0,
     filtfilt_chuck_size: int = 10,
 ) -> torch.Tensor:
     butter_a, butter_b = butter_bandpass(
-        device=device,
+        device=data.device,
         low_frequency=low_frequency,
         high_frequency=high_frequency,
         fs=fs,
     )
 
     index_full_dataset: torch.Tensor = torch.arange(
-        0, data.shape[1], device=device, dtype=torch.int64
+        0, data.shape[1], device=data.device, dtype=torch.int64
     )
 
     for chunk in chunk_iterator(index_full_dataset, filtfilt_chuck_size):

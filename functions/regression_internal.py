@@ -11,7 +11,14 @@ def regression_internal(
     regressor = input_regressor - regressor_offset
     target = input_target - target_offset
 
-    coefficients, _, _, _ = torch.linalg.lstsq(regressor, target, rcond=None)  # None ?
+    try:
+        coefficients, _, _, _ = torch.linalg.lstsq(regressor, target, rcond=None)
+    except torch.cuda.OutOfMemoryError:
+        coefficients_cpu, _, _, _ = torch.linalg.lstsq(
+            regressor.cpu(), target.cpu(), rcond=None
+        )
+        coefficients = coefficients_cpu.to(regressor.device, copy=True)
+        del coefficients_cpu
 
     intercept = target_offset.squeeze(-1) - (
         coefficients * regressor_offset.squeeze(-2)

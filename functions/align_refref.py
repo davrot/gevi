@@ -11,10 +11,13 @@ def align_refref(
     mylogger: logging.Logger,
     ref_image_acceptor: torch.Tensor,
     ref_image_donor: torch.Tensor,
-    image_alignment: ImageAlignment,
     batch_size: int,
     fill_value: float = 0,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+
+    image_alignment = ImageAlignment(
+        default_dtype=ref_image_acceptor.dtype, device=ref_image_acceptor.device
+    )
 
     mylogger.info("Rotate ref image acceptor onto donor")
     angle_refref = calculate_rotation(
