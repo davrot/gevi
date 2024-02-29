@@ -16,9 +16,14 @@ def load_meta_data(
     if silent_mode is False:
         mylogger.info(f"meta data: channel order: {channels}")
 
-    mouse_markings: str = metadata["sessionMetaData"]["mouseMarkings"]
-    if silent_mode is False:
-        mylogger.info(f"meta data: mouse markings: {mouse_markings}")
+    if "mouseMarkings" in metadata["sessionMetaData"]:
+        mouse_markings: str = metadata["sessionMetaData"]["mouseMarkings"]
+        if silent_mode is False:
+            mylogger.info(f"meta data: mouse markings: {mouse_markings}")
+    else:
+        mouse_markings = ""
+        if silent_mode is False:
+            mylogger.info("meta data: no mouse markings")
 
     recording_date: str = metadata["sessionMetaData"]["date"]
     if silent_mode is False:
