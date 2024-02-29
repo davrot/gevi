@@ -708,68 +708,77 @@ def process_trial(
     mylogger.info("Move time dimensions of data to the last dimension")
     data = data.movedim(1, -1)
 
-    mylogger.info("Regression Acceptor")
-    mylogger.info(f"Target: {config['target_camera_acceptor']}")
-    mylogger.info(
-        f"Regressors: constant, linear and {config['regressor_cameras_acceptor']}"
-    )
-    target_id: int = config["required_order"].index(config["target_camera_acceptor"])
-    regressor_id: list[int] = []
-    for i in range(0, len(config["regressor_cameras_acceptor"])):
-        regressor_id.append(
-            config["required_order"].index(config["regressor_cameras_acceptor"][i])
+    dual_signal_mode: bool = True
+    if len(config["target_camera_acceptor"]) > 0:
+        mylogger.info("Regression Acceptor")
+        mylogger.info(f"Target: {config['target_camera_acceptor']}")
+        mylogger.info(
+            f"Regressors: constant, linear and {config['regressor_cameras_acceptor']}"
+        )
+        target_id: int = config["required_order"].index(
+            config["target_camera_acceptor"]
+        )
+        regressor_id: list[int] = []
+        for i in range(0, len(config["regressor_cameras_acceptor"])):
+            regressor_id.append(
+                config["required_order"].index(config["regressor_cameras_acceptor"][i])
+            )
+
+        data_acceptor, coefficients_acceptor = regression(
+            mylogger=mylogger,
+            target_camera_id=target_id,
+            regressor_camera_ids=regressor_id,
+            mask=mask_negative,
+            data=data,
+            data_filtered=data_filtered,
+            first_none_ramp_frame=int(config["skip_frames_in_the_beginning"]),
         )
 
-    data_acceptor, coefficients_acceptor = regression(
-        mylogger=mylogger,
-        target_camera_id=target_id,
-        regressor_camera_ids=regressor_id,
-        mask=mask_negative,
-        data=data,
-        data_filtered=data_filtered,
-        first_none_ramp_frame=int(config["skip_frames_in_the_beginning"]),
-    )
+        if config["save_regression_coefficients"]:
+            temp_path = os.path.join(
+                config["export_path"], experiment_name + "_coefficients_acceptor.npy"
+            )
+            mylogger.info(f"Save acceptor coefficients to {temp_path}")
+            np.save(temp_path, coefficients_acceptor.cpu())
+        del coefficients_acceptor
 
-    if config["save_regression_coefficients"]:
-        temp_path = os.path.join(
-            config["export_path"], experiment_name + "_coefficients_acceptor.npy"
+        mylogger.info("-==- Done -==-")
+    else:
+        dual_signal_mode = False
+
+    if len(config["target_camera_donor"]) > 0:
+        mylogger.info("Regression Donor")
+        mylogger.info(f"Target: {config['target_camera_donor']}")
+        mylogger.info(
+            f"Regressors: constant, linear and {config['regressor_cameras_donor']}"
         )
-        mylogger.info(f"Save acceptor coefficients to {temp_path}")
-        np.save(temp_path, coefficients_acceptor.cpu())
-    del coefficients_acceptor
+        target_id = config["required_order"].index(config["target_camera_donor"])
+        regressor_id = []
+        for i in range(0, len(config["regressor_cameras_donor"])):
+            regressor_id.append(
+                config["required_order"].index(config["regressor_cameras_donor"][i])
+            )
 
-    mylogger.info("-==- Done -==-")
-
-    mylogger.info("Regression Donor")
-    mylogger.info(f"Target: {config['target_camera_donor']}")
-    mylogger.info(
-        f"Regressors: constant, linear and {config['regressor_cameras_donor']}"
-    )
-    target_id = config["required_order"].index(config["target_camera_donor"])
-    regressor_id = []
-    for i in range(0, len(config["regressor_cameras_donor"])):
-        regressor_id.append(
-            config["required_order"].index(config["regressor_cameras_donor"][i])
+        data_donor, coefficients_donor = regression(
+            mylogger=mylogger,
+            target_camera_id=target_id,
+            regressor_camera_ids=regressor_id,
+            mask=mask_negative,
+            data=data,
+            data_filtered=data_filtered,
+            first_none_ramp_frame=int(config["skip_frames_in_the_beginning"]),
         )
 
-    data_donor, coefficients_donor = regression(
-        mylogger=mylogger,
-        target_camera_id=target_id,
-        regressor_camera_ids=regressor_id,
-        mask=mask_negative,
-        data=data,
-        data_filtered=data_filtered,
-        first_none_ramp_frame=int(config["skip_frames_in_the_beginning"]),
-    )
-
-    if config["save_regression_coefficients"]:
-        temp_path = os.path.join(
-            config["export_path"], experiment_name + "_coefficients_donor.npy"
-        )
-        mylogger.info(f"Save acceptor donor to {temp_path}")
-        np.save(temp_path, coefficients_donor.cpu())
-    del coefficients_donor
-    mylogger.info("-==- Done -==-")
+        if config["save_regression_coefficients"]:
+            temp_path = os.path.join(
+                config["export_path"], experiment_name + "_coefficients_donor.npy"
+            )
+            mylogger.info(f"Save acceptor donor to {temp_path}")
+            np.save(temp_path, coefficients_donor.cpu())
+        del coefficients_donor
+        mylogger.info("-==- Done -==-")
+    else:
+        dual_signal_mode = False
 
     del data
     del data_filtered
@@ -783,14 +792,21 @@ def process_trial(
         mylogger.info(f"CUDA memory: {free_mem//1024} MByte")
 
     mylogger.info("Calculate ratio sequence")
-    if config["classical_ratio_mode"]:
-        mylogger.info("via acceptor / donor")
-        ratio_sequence: torch.Tensor = data_acceptor / data_donor
-        mylogger.info("via / mean over time")
-        ratio_sequence /= ratio_sequence.mean(dim=-1, keepdim=True)
+    if dual_signal_mode:
+        if config["classical_ratio_mode"]:
+            mylogger.info("via acceptor / donor")
+            ratio_sequence: torch.Tensor = data_acceptor / data_donor
+            mylogger.info("via / mean over time")
+            ratio_sequence /= ratio_sequence.mean(dim=-1, keepdim=True)
+        else:
+            mylogger.info("via 1.0 + acceptor - donor")
+            ratio_sequence = 1.0 + data_acceptor - data_donor
     else:
-        mylogger.info("via 1.0 + acceptor - donor")
-        ratio_sequence = 1.0 + data_acceptor - data_donor
+        mylogger.info("mono signal model")
+        if len(config["target_camera_donor"]) > 0:
+            ratio_sequence = data_donor.clone()
+        else:
+            ratio_sequence = data_acceptor.clone()
 
     mylogger.info("Remove nan")
     ratio_sequence = torch.nan_to_num(ratio_sequence, nan=0.0)
@@ -881,6 +897,15 @@ config = load_config(mylogger=mylogger)
 if (config["save_as_python"] is False) and (config["save_as_matlab"] is False):
     mylogger.info("No output will be created. ")
     mylogger.info("Change save_as_python and/or save_as_matlab in the config file")
+    mylogger.info("ERROR: STOP!!!")
+    exit()
+
+if (len(config["target_camera_donor"]) == 0) and (
+    len(config["target_camera_acceptor"]) == 0
+):
+    mylogger.info(
+        "Configure at least target_camera_donor or target_camera_acceptor correctly."
+    )
     mylogger.info("ERROR: STOP!!!")
     exit()
 
