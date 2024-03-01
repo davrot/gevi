@@ -8,15 +8,14 @@
     // Ratio Sequence
     "classical_ratio_mode": true, // true: a/d false: 1+a-d
     // Regression
-    //"target_camera_acceptor": "acceptor",
-    "target_camera_acceptor": "",
+    "target_camera_acceptor": "acceptor",
     "regressor_cameras_acceptor": [
         "oxygenation",
         "volume"
     ],
     "target_camera_donor": "donor",
     "regressor_cameras_donor": [
-        //    "oxygenation",
+        "oxygenation",
         "volume"
     ],
     // binning
