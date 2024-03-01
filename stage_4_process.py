@@ -20,6 +20,8 @@ from functions.gauss_smear_individual import gauss_smear_individual
 from functions.regression import regression
 from functions.data_raw_loader import data_raw_loader
 
+import argh
+
 
 @torch.no_grad()
 def process_trial(
@@ -889,71 +891,96 @@ def process_trial(
     return
 
 
-mylogger = create_logger(
-    save_logging_messages=True, display_logging_messages=True, log_stage_name="stage_4"
-)
-config = load_config(mylogger=mylogger)
-
-if (config["save_as_python"] is False) and (config["save_as_matlab"] is False):
-    mylogger.info("No output will be created. ")
-    mylogger.info("Change save_as_python and/or save_as_matlab in the config file")
-    mylogger.info("ERROR: STOP!!!")
-    exit()
-
-if (len(config["target_camera_donor"]) == 0) and (
-    len(config["target_camera_acceptor"]) == 0
-):
-    mylogger.info(
-        "Configure at least target_camera_donor or target_camera_acceptor correctly."
+def main(
+    *,
+    config_filename: str = "config.json",
+    experiment_id_overwrite: int = -1,
+    trial_id_overwrite: int = -1,
+) -> None:
+    mylogger = create_logger(
+        save_logging_messages=True,
+        display_logging_messages=True,
+        log_stage_name="stage_4",
     )
-    mylogger.info("ERROR: STOP!!!")
-    exit()
 
-device = get_torch_device(mylogger, config["force_to_cpu"])
+    config = load_config(mylogger=mylogger, filename=config_filename)
 
-mylogger.info(f"Create directory {config['export_path']} in the case it does not exist")
-os.makedirs(config["export_path"], exist_ok=True)
+    if (config["save_as_python"] is False) and (config["save_as_matlab"] is False):
+        mylogger.info("No output will be created. ")
+        mylogger.info("Change save_as_python and/or save_as_matlab in the config file")
+        mylogger.info("ERROR: STOP!!!")
+        exit()
 
-raw_data_path: str = os.path.join(
-    config["basic_path"],
-    config["recoding_data"],
-    config["mouse_identifier"],
-    config["raw_path"],
-)
-
-if os.path.isdir(raw_data_path) is False:
-    mylogger.info(f"ERROR: could not find raw directory {raw_data_path}!!!!")
-    exit()
-
-experiments = get_experiments(raw_data_path)
-
-for experiment_counter in range(0, experiments.shape[0]):
-    experiment_id = int(experiments[experiment_counter])
-    trials = get_trials(raw_data_path, experiment_id)
-    for trial_counter in range(0, trials.shape[0]):
-        trial_id = int(trials[trial_counter])
-
-        mylogger.info("")
+    if (len(config["target_camera_donor"]) == 0) and (
+        len(config["target_camera_acceptor"]) == 0
+    ):
         mylogger.info(
-            f"======= EXPERIMENT ID: {experiment_id} ==== TRIAL ID: {trial_id} ======="
+            "Configure at least target_camera_donor or target_camera_acceptor correctly."
         )
-        mylogger.info("")
+        mylogger.info("ERROR: STOP!!!")
+        exit()
 
-        try:
-            process_trial(
-                config=config,
-                mylogger=mylogger,
-                experiment_id=experiment_id,
-                trial_id=trial_id,
-                device=device,
+    device = get_torch_device(mylogger, config["force_to_cpu"])
+
+    mylogger.info(
+        f"Create directory {config['export_path']} in the case it does not exist"
+    )
+    os.makedirs(config["export_path"], exist_ok=True)
+
+    raw_data_path: str = os.path.join(
+        config["basic_path"],
+        config["recoding_data"],
+        config["mouse_identifier"],
+        config["raw_path"],
+    )
+
+    if os.path.isdir(raw_data_path) is False:
+        mylogger.info(f"ERROR: could not find raw directory {raw_data_path}!!!!")
+        exit()
+
+    if experiment_id_overwrite == -1:
+        experiments = get_experiments(raw_data_path)
+    else:
+        assert experiment_id_overwrite >= 0
+        experiments = torch.tensor([experiment_id_overwrite])
+
+    for experiment_counter in range(0, experiments.shape[0]):
+        experiment_id = int(experiments[experiment_counter])
+
+        if trial_id_overwrite == -1:
+            trials = get_trials(raw_data_path, experiment_id)
+        else:
+            assert trial_id_overwrite >= 0
+            trials = torch.tensor([trial_id_overwrite])
+
+        for trial_counter in range(0, trials.shape[0]):
+            trial_id = int(trials[trial_counter])
+
+            mylogger.info("")
+            mylogger.info(
+                f"======= EXPERIMENT ID: {experiment_id} ==== TRIAL ID: {trial_id} ======="
             )
-        except torch.cuda.OutOfMemoryError:
-            mylogger.info("WARNING: RUNNING IN FAILBACK MODE!!!!")
-            mylogger.info("Not enough GPU memory. Retry on CPU")
-            process_trial(
-                config=config,
-                mylogger=mylogger,
-                experiment_id=experiment_id,
-                trial_id=trial_id,
-                device=torch.device("cpu"),
-            )
+            mylogger.info("")
+
+            try:
+                process_trial(
+                    config=config,
+                    mylogger=mylogger,
+                    experiment_id=experiment_id,
+                    trial_id=trial_id,
+                    device=device,
+                )
+            except torch.cuda.OutOfMemoryError:
+                mylogger.info("WARNING: RUNNING IN FAILBACK MODE!!!!")
+                mylogger.info("Not enough GPU memory. Retry on CPU")
+                process_trial(
+                    config=config,
+                    mylogger=mylogger,
+                    experiment_id=experiment_id,
+                    trial_id=trial_id,
+                    device=torch.device("cpu"),
+                )
+
+
+if __name__ == "__main__":
+    argh.dispatch_command(main)

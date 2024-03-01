@@ -23,7 +23,7 @@ mylogger = create_logger(
 )
 config = load_config(mylogger=mylogger)
 
-experiment_id: int = 1
+experiment_id: int = 2
 
 raw_data_path: str = os.path.join(
     config["basic_path"],
