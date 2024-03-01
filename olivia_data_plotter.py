@@ -6,16 +6,27 @@ from functions.load_config import load_config
 
 from functions.get_trials import get_trials
 import h5py  # type: ignore
-
+import torch
+import scipy  # type: ignore
 import argh
+from functions.data_raw_loader import data_raw_loader
 
 
-def main(*, experiment_id: int = 1, config_filename: str = "config.json") -> None:
+def main(
+    *,
+    experiment_id: int = 4,
+    config_filename: str = "config.json",
+    highpass_freqency: float = 0.5,
+    lowpass_freqency: float = 10.0,
+    butter_worth_order: int = 4,
+    log_stage_name: str = "olivia",
+    plot_show: bool = True,
+) -> None:
 
     mylogger = create_logger(
         save_logging_messages=True,
         display_logging_messages=True,
-        log_stage_name="test_xxx",
+        log_stage_name=log_stage_name,
     )
     config = load_config(mylogger=mylogger, filename=config_filename)
 
@@ -61,13 +72,142 @@ def main(*, experiment_id: int = 1, config_filename: str = "config.json") -> Non
     control = ratio_sequence[control_roi, :].mean(axis=0)
     s_darken = ratio_sequence[s_darken_roi, :].mean(axis=0)
 
+    max_value = max(
+        [
+            control[config["skip_frames_in_the_beginning"] :].max(),
+            s_darken[config["skip_frames_in_the_beginning"] :].max(),
+        ]
+    )
+    min_value = min(
+        [
+            control[config["skip_frames_in_the_beginning"] :].min(),
+            s_darken[config["skip_frames_in_the_beginning"] :].min(),
+        ]
+    )
+
+    first_trial_id: int = int(get_trials(raw_data_path, experiment_id).min())
+    (
+        meta_channels,
+        meta_mouse_markings,
+        meta_recording_date,
+        meta_stimulation_times,
+        meta_experiment_names,
+        meta_trial_recording_duration,
+        meta_frame_time,
+        meta_mouse,
+        data,
+    ) = data_raw_loader(
+        raw_data_path=raw_data_path,
+        mylogger=mylogger,
+        experiment_id=experiment_id,
+        trial_id=first_trial_id,
+        device=torch.device("cpu"),
+        force_to_cpu_memory=True,
+        config=config,
+    )
+
+    idx = config["required_order"].index("acceptor")
+    acceptor = data[..., idx].mean(axis=0).mean(axis=0)
+    acceptor -= acceptor[config["skip_frames_in_the_beginning"] :].min()
+    acceptor /= acceptor[config["skip_frames_in_the_beginning"] :].max()
+
+    acceptor_f0 = acceptor.clone()
+    acceptor_f0 *= max_value - min_value
+    acceptor_f0 += min_value
+
+    b, a = scipy.signal.butter(
+        butter_worth_order,
+        lowpass_freqency,
+        btype="low",
+        output="ba",
+        fs=1.0 / meta_frame_time,
+    )
+    control_f1 = scipy.signal.filtfilt(b, a, control)
+    s_darken_f1 = scipy.signal.filtfilt(b, a, s_darken)
+
+    b, a = scipy.signal.butter(
+        butter_worth_order,
+        highpass_freqency,
+        btype="high",
+        output="ba",
+        fs=1.0 / meta_frame_time,
+    )
+    control_f1 = scipy.signal.filtfilt(b, a, control_f1)
+    s_darken_f1 = scipy.signal.filtfilt(b, a, s_darken_f1)
+
+    max_value = max(
+        [
+            control_f1[config["skip_frames_in_the_beginning"] :].max(),
+            s_darken_f1[config["skip_frames_in_the_beginning"] :].max(),
+        ]
+    )
+    min_value = min(
+        [
+            control_f1[config["skip_frames_in_the_beginning"] :].min(),
+            s_darken_f1[config["skip_frames_in_the_beginning"] :].min(),
+        ]
+    )
+
+    acceptor_f1 = acceptor.clone()
+    acceptor_f1 *= max_value - min_value
+    acceptor_f1 += min_value
+
     t = np.arange(0, control.shape[0]) / 100.0
 
-    plt.plot(t, control, label="control")
-    plt.plot(t, s_darken, label="sDarken")
+    plt.figure(figsize=(10, 10))
+    plt.subplot(2, 1, 1)
+    plt.plot(
+        t[config["skip_frames_in_the_beginning"] :],
+        acceptor_f0[config["skip_frames_in_the_beginning"] :],
+        color=(0.5, 0.5, 0.5),
+        label="light (acceptor)",
+    )
+
+    plt.plot(
+        t[config["skip_frames_in_the_beginning"] :],
+        control[config["skip_frames_in_the_beginning"] :],
+        label="control",
+    )
+    plt.plot(
+        t[config["skip_frames_in_the_beginning"] :],
+        s_darken[config["skip_frames_in_the_beginning"] :],
+        label="sDarken",
+    )
+    plt.title(
+        f"Experiment {experiment_id} {config['recoding_data']} {config['mouse_identifier']}"
+    )
+
     plt.legend()
     plt.xlabel("Time [sec]")
-    plt.show()
+
+    plt.subplot(2, 1, 2)
+
+    plt.plot(
+        t[config["skip_frames_in_the_beginning"] :],
+        acceptor_f1[config["skip_frames_in_the_beginning"] :],
+        color=(0.5, 0.5, 0.5),
+        label="light (acceptor)",
+    )
+
+    plt.plot(
+        t[config["skip_frames_in_the_beginning"] :],
+        control_f1[config["skip_frames_in_the_beginning"] :],
+        label=f"control ({highpass_freqency}Hz - {lowpass_freqency}Hz)",
+    )
+    plt.plot(
+        t[config["skip_frames_in_the_beginning"] :],
+        s_darken_f1[config["skip_frames_in_the_beginning"] :],
+        label=f"sDarken ({highpass_freqency}Hz - {lowpass_freqency}Hz)",
+    )
+
+    plt.legend()
+    plt.xlabel("Time [sec]")
+    plt.savefig(
+        f"olivia_both_Exp{experiment_id}_{config['recoding_data']}_{config['mouse_identifier']}.png",
+        dpi=300,
+    )
+    if plot_show:
+        plt.show()
 
 
 if __name__ == "__main__":
