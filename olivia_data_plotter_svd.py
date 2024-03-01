@@ -8,64 +8,75 @@ from functions.get_trials import get_trials
 import h5py  # type: ignore
 import torch
 
-control_file_handle = h5py.File("ROI_control_49.mat", "r")
-control_roi = (np.array(control_file_handle["roi"]).T) > 0
-control_file_handle.close()
-control_roi = control_roi.reshape((control_roi.shape[0] * control_roi.shape[1]))
+import argh
 
-s_darken_file_handle = h5py.File("ROI_sDarken_49.mat", "r")
-s_darken_roi = (np.array(s_darken_file_handle["roi"]).T) > 0
-s_darken_file_handle.close()
-s_darken_roi = s_darken_roi.reshape((s_darken_roi.shape[0] * s_darken_roi.shape[1]))
 
-mylogger = create_logger(
-    save_logging_messages=True, display_logging_messages=True, log_stage_name="test_xxx"
-)
-config = load_config(mylogger=mylogger)
+def main(*, experiment_id: int = 1, config_filename: str = "config.json") -> None:
 
-experiment_id: int = 2
+    mylogger = create_logger(
+        save_logging_messages=True,
+        display_logging_messages=True,
+        log_stage_name="test_xxx",
+    )
+    config = load_config(mylogger=mylogger, filename=config_filename)
 
-raw_data_path: str = os.path.join(
-    config["basic_path"],
-    config["recoding_data"],
-    config["mouse_identifier"],
-    config["raw_path"],
-)
+    roi_path: str = config["ref_image_path"]
 
-data_path: str = "output"
+    control_file_handle = h5py.File(os.path.join(roi_path, "ROI_control.mat"), "r")
+    control_roi = (np.array(control_file_handle["roi"]).T) > 0
+    control_file_handle.close()
+    control_roi = control_roi.reshape((control_roi.shape[0] * control_roi.shape[1]))
 
-trails = get_trials(path=raw_data_path, experiment_id=experiment_id)
-for i in range(0, trails.shape[0]):
-    trial_id = int(trails[i])
-    experiment_name: str = f"Exp{experiment_id:03d}_Trial{trial_id:03d}"
-    mylogger.info(f"Loading files for {experiment_name}")
+    s_darken_file_handle = h5py.File(os.path.join(roi_path, "ROI_sDarken.mat"), "r")
+    s_darken_roi = (np.array(s_darken_file_handle["roi"]).T) > 0
+    s_darken_file_handle.close()
+    s_darken_roi = s_darken_roi.reshape((s_darken_roi.shape[0] * s_darken_roi.shape[1]))
 
-    data = np.load(os.path.join(data_path, f"{experiment_name}_ratio_sequence.npz"))
-    rs = data["ratio_sequence"]
-    rs = rs.reshape((rs.shape[0] * rs.shape[1], rs.shape[2]))
-    rs_c = rs[control_roi, :]
-    rs_c_core, _, _ = torch.linalg.svd(torch.tensor(rs_c.T), full_matrices=False)
-    rs_c_core = rs_c_core[:, 0].numpy()
+    raw_data_path: str = os.path.join(
+        config["basic_path"],
+        config["recoding_data"],
+        config["mouse_identifier"],
+        config["raw_path"],
+    )
 
-    rs_s = rs[s_darken_roi, :]
-    rs_s_core, _, _ = torch.linalg.svd(torch.tensor(rs_s.T), full_matrices=False)
-    rs_s_core = rs_s_core[:, 0].numpy()
+    data_path: str = str(config["export_path"])
 
-    rs_s_core -= rs_s_core.mean(keepdims=True)
-    rs_c_core -= rs_c_core.mean(keepdims=True)
+    trails = get_trials(path=raw_data_path, experiment_id=experiment_id)
+    for i in range(0, trails.shape[0]):
+        trial_id = int(trails[i])
+        experiment_name: str = f"Exp{experiment_id:03d}_Trial{trial_id:03d}"
+        mylogger.info(f"Loading files for {experiment_name}")
 
-    rs_c_core *= (rs_s_core * rs_c_core).sum() / (rs_c_core**2).sum()
+        data = np.load(os.path.join(data_path, f"{experiment_name}_ratio_sequence.npz"))
+        rs = data["ratio_sequence"]
+        rs = rs.reshape((rs.shape[0] * rs.shape[1], rs.shape[2]))
+        rs_c = rs[control_roi, :]
+        rs_c_core, _, _ = torch.linalg.svd(torch.tensor(rs_c.T), full_matrices=False)
+        rs_c_core = rs_c_core[:, 0].numpy()
 
-    if i == 0:
-        ratio_sequence = rs_s_core - rs_c_core
-    else:
-        ratio_sequence += rs_s_core - rs_c_core
+        rs_s = rs[s_darken_roi, :]
+        rs_s_core, _, _ = torch.linalg.svd(torch.tensor(rs_s.T), full_matrices=False)
+        rs_s_core = rs_s_core[:, 0].numpy()
 
-ratio_sequence /= float(trails.shape[0])
+        rs_s_core -= rs_s_core.mean(keepdims=True)
+        rs_c_core -= rs_c_core.mean(keepdims=True)
 
-t = np.arange(0, ratio_sequence.shape[0]) / 100.0
+        rs_c_core *= (rs_s_core * rs_c_core).sum() / (rs_c_core**2).sum()
 
-plt.plot(t, ratio_sequence, label="sDarken-control")
-plt.legend()
-plt.xlabel("Time [sec]")
-plt.show()
+        if i == 0:
+            ratio_sequence = rs_s_core - rs_c_core
+        else:
+            ratio_sequence += rs_s_core - rs_c_core
+
+    ratio_sequence /= float(trails.shape[0])
+
+    t = np.arange(0, ratio_sequence.shape[0]) / 100.0
+
+    plt.plot(t, ratio_sequence, label="sDarken - control")
+    plt.legend()
+    plt.xlabel("Time [sec]")
+    plt.show()
+
+
+if __name__ == "__main__":
+    argh.dispatch_command(main)
