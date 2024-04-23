@@ -13,7 +13,7 @@ def create_logger(
     logger.setLevel(logging.DEBUG)
 
     if save_logging_messages:
-        time_format = "%b %-d %Y %H:%M:%S"
+        time_format = "%b %d %Y %H:%M:%S"
         logformat = "%(asctime)s %(message)s"
         file_formatter = logging.Formatter(fmt=logformat, datefmt=time_format)
         os.makedirs("logs_" + log_stage_name, exist_ok=True)
