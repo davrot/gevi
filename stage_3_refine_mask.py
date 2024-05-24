@@ -32,6 +32,7 @@ def main(*, config_filename: str = "config.json") -> None:
 
     path: str = config["ref_image_path"]
     use_channel: str = "donor"
+    padding: int = 20
 
     image_ref_file: str = os.path.join(path, use_channel + ".npy")
     heartbeat_mask_file: str = os.path.join(path, "heartbeat_mask.npy")
@@ -40,9 +41,11 @@ def main(*, config_filename: str = "config.json") -> None:
     mylogger.info(f"loading image reference file: {image_ref_file}")
     image_ref: np.ndarray = np.load(image_ref_file)
     image_ref /= image_ref.max()
+    image_ref = np.pad(image_ref, pad_width=padding)
 
     mylogger.info(f"loading heartbeat mask: {heartbeat_mask_file}")
     mask: np.ndarray = np.load(heartbeat_mask_file)
+    mask = np.pad(mask, pad_width=padding)
 
     image_3color = np.concatenate(
         (
@@ -68,6 +71,7 @@ def main(*, config_filename: str = "config.json") -> None:
         nonlocal mask
 
         mylogger.info(f"Save mask to: {refined_mask_file}")
+        mask = mask[padding:-padding, padding:-padding]
         np.save(refined_mask_file, mask)
 
         exit()
@@ -88,7 +92,7 @@ def main(*, config_filename: str = "config.json") -> None:
                 "A ROI with the following coordiantes has been added to the mask"
             )
             for i in range(0, len(new_roi.x)):
-                mylogger.info(f"{round(new_roi.x[i],1)} x {round(new_roi.y[i],1)}")
+                mylogger.info(f"{round(new_roi.x[i], 1)} x {round(new_roi.y[i], 1)}")
             mylogger.info("")
             new_mask = new_roi.get_mask(display_image[:, :, 0])
             mask[new_mask] = 0.0
@@ -110,7 +114,7 @@ def main(*, config_filename: str = "config.json") -> None:
                 "A ROI with the following coordiantes has been removed from the mask"
             )
             for i in range(0, len(new_roi.x)):
-                mylogger.info(f"{round(new_roi.x[i],1)} x {round(new_roi.y[i],1)}")
+                mylogger.info(f"{round(new_roi.x[i], 1)} x {round(new_roi.y[i], 1)}")
             mylogger.info("")
             new_mask = new_roi.get_mask(display_image[:, :, 0])
             mask[new_mask] = 1.0

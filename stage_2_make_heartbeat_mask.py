@@ -83,7 +83,8 @@ def main(*, config_filename: str = "config.json") -> None:
     display_image = np.nan_to_num(display_image, nan=1.0)
 
     value_sort = np.sort(image_var.flatten())
-    value_sort_max = value_sort[int(value_sort.shape[0] * 0.95)]
+    value_sort_max = value_sort[int(value_sort.shape[0] * 0.95)] * 3
+    print(value_sort_max)
     mylogger.info("-==- DONE -==-")
 
     mylogger.info("Create figure")
