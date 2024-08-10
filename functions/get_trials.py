@@ -14,5 +14,6 @@ def get_trials(path: str, experiment_id: int) -> torch.Tensor:
     list_int: list[int] = []
     for i in range(0, len(list_str)):
         list_int.append(int(list_str[i].split("_Trial")[-1].split("_Part")[0]))
+
     list_int = sorted(list_int)
     return torch.tensor(list_int).unique()
