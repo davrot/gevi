@@ -5,6 +5,8 @@
     "raw_path": "raw",
     "export_path": "output_M3879M_2021-10-05",
     "ref_image_path": "ref_images_M3879M_2021-10-05",
+    "heartbeat_remove": true, // if gevi must be true; geci: who knows...
+    "gevi": true, // true => gevi, false => geci
     // Ratio Sequence
     "classical_ratio_mode": true, // true: a/d false: 1+a-d
     // Regression

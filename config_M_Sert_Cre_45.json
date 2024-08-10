@@ -1,10 +1,10 @@
 {
     "basic_path": "/data_1/hendrik",
-    "recoding_data": "2023-03-15",
-    "mouse_identifier": "M_Sert_Cre_49",
+    "recoding_data": "2023-07-18",
+    "mouse_identifier": "M_Sert_Cre_45",
     "raw_path": "raw",
-    "export_path": "output_M_Sert_Cre_49",
-    "ref_image_path": "ref_images_M_Sert_Cre_49",
+    "export_path": "output_M_Sert_Cre_45",
+    "ref_image_path": "ref_images_M_Sert_Cre_45",
     "heartbeat_remove": false,
     "gevi": false, // true => gevi, false => geci
     // Ratio Sequence

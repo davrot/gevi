@@ -5,6 +5,8 @@
     "raw_path": "raw",
     "export_path": "output_M_Sert_Cre_41",
     "ref_image_path": "ref_images_M_Sert_Cre_41",
+    "heartbeat_remove": false,
+    "gevi": false, // true => gevi, false => geci
     // Ratio Sequence
     "classical_ratio_mode": true, // true: a/d false: 1+a-d
     // Regression
