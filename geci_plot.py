@@ -79,7 +79,7 @@ def plot(
     trials = get_trials(raw_data_path, experiment).numpy()
     assert trials.shape[0] > 0
 
-    with open(os.path.join(raw_data_path, f"Exp{experiment:03d}_Trial{trials[0]:03d}_Part001_meta.txt"), "r") as file:
+    with open(f"meta_{config["mouse_identifier"]}_exp{experiment:03d}.json", "r") as file:
         metadata = json.loads(jsmin(file.read()))
 
     experiment_names = metadata['sessionMetaData']['experimentNames'][str(experiment)]
