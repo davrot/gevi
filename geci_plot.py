@@ -27,35 +27,6 @@ def plot(
     fit_power: bool = False,  # True => -ax^b ; False => exp(-b)
 ) -> None:
 
-    # lbs = [
-    #     [
-    #         "control",
-    #         "visual control",
-    #         "op20 50 5",
-    #         "op20 100 5",
-    #         "op20 50 grat",
-    #         "op20 100 grat",
-    #     ],
-    #     [
-    #         "control",
-    #         "visual control",
-    #         "op20 50 5",
-    #         "op20 100 5",
-    #         "op20 50 grat",
-    #         "op20 100 grat",
-    #     ],
-    #     [
-    #         "control",
-    #         "visual control",
-    #         "op20 50 5",
-    #         "op20 100 5",
-    #         "op20 50 grat",
-    #         "op20 100 grat",
-    #     ],
-    #     ["control", "visual control", "op20 50 5", "op20 100 5"],
-    #     ["control", "visual control", "op20 50 5", "op20 100 5"],
-    # ]
-
     if os.path.isfile(filename) is False:
         print(f"{filename} is missing")
         exit()
