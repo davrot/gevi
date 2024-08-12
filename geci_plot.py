@@ -19,7 +19,7 @@ def func_exp(x, a, b, c):
 def plot(
     filename: str = "config_M_Sert_Cre_49.json",
     experiment: int = 4,
-    skip_timesteps: int = 0,
+    skip_timesteps: int = 100,
     # If there is no special ROI... Get one! This is just a backup
     roi_control_path_default: str = "roi_controlM_Sert_Cre_49.npy",
     roi_sdarken_path_default: str = "roi_sdarkenM_Sert_Cre_49.npy",
@@ -93,13 +93,19 @@ def plot(
     plt.show(block=False)
 
     plt.figure(3)
-    light_exp = light[experiment - 1, :, :, skip_timesteps:].copy()
+    if remove_fit:
+        light_exp = light[experiment - 1, :, :, skip_timesteps:].copy()
+    else:
+        light_exp = light[experiment - 1, :, :, :].copy()
     light_exp[(roi_darken + roi_control) < 0.5, :] = 0.0
     light_signal = light_exp.mean(axis=(0, 1))
     light_signal -= light_signal.min()
     light_signal /= light_signal.max()
 
-    a_exp = data[experiment - 1, :, :, skip_timesteps:].copy()
+    if remove_fit:
+        a_exp = data[experiment - 1, :, :, skip_timesteps:].copy()
+    else:
+        a_exp = data[experiment - 1, :, :, :].copy()
 
     if remove_fit:
         combined_matrix = (roi_darken + roi_control) > 0
