@@ -6,7 +6,6 @@ import scipy  # type: ignore
 import json
 import os
 from jsmin import jsmin  # type:ignore
-from functions.get_trials import get_trials
 
 
 def func_pow(x, a, b, c):
@@ -75,9 +74,6 @@ def plot(
     if os.path.isdir(raw_data_path) is False:
         print(f"ERROR: could not find raw directory {raw_data_path}!!!!")
         exit()
-
-    trials = get_trials(raw_data_path, experiment).numpy()
-    assert trials.shape[0] > 0
 
     with open(f"meta_{config["mouse_identifier"]}_exp{experiment:03d}.json", "r") as file:
         metadata = json.loads(jsmin(file.read()))
