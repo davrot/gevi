@@ -53,44 +53,6 @@ def loader(mouse: int = 0, fpath: str = "/data_1/hendrik/gevi") -> None:
         ],  # 0, 0, 0 in cond 5-7
     ]
 
-    # 41, 42, 45, 46, 49:
-    #               "1": "control",
-    #               "2": "visual control grating 100 1s",
-    #               "3": "optical Stimulation 20Hz 50% 5 Intervals",
-    #               "4": "optical Stimulation 20Hz 100% 5 Intervals",
-    #               "5": "optical Stimulation 20Hz 50% and grating 100",
-    #               "6": "optical Stimulation 20Hz 100% and grating 100",
-    #               "7": "grating 3s"
-
-    lbs = [
-        [
-            "control",
-            "visual control",
-            "op20 50 5",
-            "op20 100 5",
-            "op20 50 grat",
-            "op20 100 grat",
-        ],
-        [
-            "control",
-            "visual control",
-            "op20 50 5",
-            "op20 100 5",
-            "op20 50 grat",
-            "op20 100 grat",
-        ],
-        [
-            "control",
-            "visual control",
-            "op20 50 5",
-            "op20 100 5",
-            "op20 50 grat",
-            "op20 100 grat",
-        ],
-        ["control", "visual control", "op20 50 5", "op20 100 5"],
-        ["control", "visual control", "op20 50 5", "op20 100 5"],
-    ]
-
     n_exp = len(n_tris[mouse])
 
     for i_exp in range(n_exp):

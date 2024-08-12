@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import h5py  # type: ignore
 import argh
 import scipy  # type: ignore
 import json
@@ -22,8 +21,8 @@ def plot(
     experiment: int = 4,
     skip_timesteps: int = 100,
     # If there is no special ROI... Get one! This is just a backup
-    roi_control_path: str = "/data_1/hendrik/2023-03-15/ROI_control.mat",
-    roi_sdraken_path: str = "/data_1/hendrik/2023-03-15/ROI_sDarken.mat",
+    roi_control_path_default: str = "roi_controlM_Sert_Cre_49.npy",
+    roi_sdarken_path_default: str = "roi_sdarkenM_Sert_Cre_49.npy",
     remove_fit: bool = True,
     fit_power: bool = False,  # True => -ax^b ; False => exp(-b)
 ) -> None:
@@ -80,15 +79,16 @@ def plot(
 
     experiment_names = metadata['sessionMetaData']['experimentNames'][str(experiment)]
 
-    roi_path: str = os.path.join(config["basic_path"], config["recoding_data"])
-    roi_control_mat: str = os.path.join(roi_path, "ROI_control.mat")
-    roi_sdarken_mat: str = os.path.join(roi_path, "ROI_sDarken.mat")
+    roi_control_path: str = f"roi_control{config["mouse_identifier"]}.npy"
+    roi_sdarken_path: str = f"roi_sdarken{config["mouse_identifier"]}.npy"
 
-    if os.path.isdir(roi_control_mat):
-        roi_control_path = roi_control_mat
+    if os.path.isfile(roi_control_path) is False:
+        print(f"Using replacement RIO: {roi_control_path_default}")
+        roi_control_path = roi_control_path_default
 
-    if os.path.isdir(roi_sdarken_mat):
-        roi_sdraken_path = roi_sdarken_mat
+    if os.path.isfile(roi_sdarken_path) is False:
+        print(f"Using replacement RIO: {roi_sdarken_path_default}")
+        roi_sdarken_path = roi_sdarken_path_default
 
     print("Load data...")
     data = np.load("dsq_" + config["mouse_identifier"] + ".npy", mmap_mode="r")
@@ -99,31 +99,31 @@ def plot(
     print("Load mask...")
     mask = np.load("msq_" + config["mouse_identifier"] + ".npy")
 
-    hf = h5py.File(roi_control_path, "r")
-    roi_lighten = np.array(hf["roi"]).T
-    roi_lighten *= mask
+    roi_control = np.load(roi_control_path)
+    roi_control *= mask
+    assert roi_control.sum() > 0, "ROI control empty"
 
-    hf = h5py.File(roi_sdraken_path, "r")
-    roi_darken = np.array(hf["roi"]).T
+    roi_darken = np.load(roi_sdarken_path)
     roi_darken *= mask
+    assert roi_darken.sum() > 0, "ROI sDarken empty"
 
     plt.figure(1)
     a_show = data[experiment - 1, :, :, 1000].copy()
-    a_show[(roi_darken + roi_lighten) < 0.5] = np.nan
+    a_show[(roi_darken + roi_control) < 0.5] = np.nan
     plt.imshow(a_show)
     plt.title(f"{config["mouse_identifier"]} -- Experiment: {experiment}")
     plt.show(block=False)
 
     plt.figure(2)
     a_dontshow = data[experiment - 1, :, :, 1000].copy()
-    a_dontshow[(roi_darken + roi_lighten) > 0.5] = np.nan
+    a_dontshow[(roi_darken + roi_control) > 0.5] = np.nan
     plt.imshow(a_dontshow)
     plt.title(f"{config["mouse_identifier"]} -- Experiment: {experiment}")
     plt.show(block=False)
 
     plt.figure(3)
     light_exp = light[experiment - 1, :, :, skip_timesteps:].copy()
-    light_exp[(roi_darken + roi_lighten) < 0.5, :] = 0.0
+    light_exp[(roi_darken + roi_control) < 0.5, :] = 0.0
     light_signal = light_exp.mean(axis=(0, 1))
     light_signal -= light_signal.min()
     light_signal /= light_signal.max()
@@ -131,7 +131,7 @@ def plot(
     a_exp = data[experiment - 1, :, :, skip_timesteps:].copy()
 
     if remove_fit:
-        combined_matrix = (roi_darken + roi_lighten) > 0
+        combined_matrix = (roi_darken + roi_control) > 0
         idx = np.where(combined_matrix)
         for idx_pos in range(0, idx[0].shape[0]):
             temp = a_exp[idx[0][idx_pos], idx[1][idx_pos], :]
@@ -185,7 +185,7 @@ def plot(
                 temp -= pattern
 
     darken = a_exp[roi_darken > 0.5, :].sum(axis=0) / (roi_darken > 0.5).sum()
-    lighten = a_exp[roi_lighten > 0.5, :].sum(axis=0) / (roi_lighten > 0.5).sum()
+    lighten = a_exp[roi_control > 0.5, :].sum(axis=0) / (roi_control > 0.5).sum()
 
     light_signal *= darken.max() - darken.min()
     light_signal += darken.min()
