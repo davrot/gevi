@@ -19,11 +19,11 @@ def func_exp(x, a, b, c):
 def plot(
     filename: str = "config_M_Sert_Cre_49.json",
     experiment: int = 4,
-    skip_timesteps: int = 100,
+    skip_timesteps: int = 0,
     # If there is no special ROI... Get one! This is just a backup
     roi_control_path_default: str = "roi_controlM_Sert_Cre_49.npy",
     roi_sdarken_path_default: str = "roi_sdarkenM_Sert_Cre_49.npy",
-    remove_fit: bool = True,
+    remove_fit: bool = False,
     fit_power: bool = False,  # True => -ax^b ; False => exp(-b)
 ) -> None:
 
@@ -154,6 +154,7 @@ def plot(
 
             if pattern is not None:
                 temp -= pattern
+            a_exp[idx[0][idx_pos], idx[1][idx_pos], :] = temp
 
     darken = a_exp[roi_darken > 0.5, :].sum(axis=0) / (roi_darken > 0.5).sum()
     lighten = a_exp[roi_control > 0.5, :].sum(axis=0) / (roi_control > 0.5).sum()
