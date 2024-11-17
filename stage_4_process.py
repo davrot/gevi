@@ -498,7 +498,7 @@ def process_trial(
             volume_heartbeat_cpu, _, _ = torch.linalg.svd(
                 heartbeat_ts.cpu(), full_matrices=False
             )
-            volume_heartbeat = volume_heartbeat_cpu.to(heartbeat_ts.data, copy=True)
+            volume_heartbeat = volume_heartbeat_cpu.to(heartbeat_ts.device, copy=True)
             del volume_heartbeat_cpu
 
         volume_heartbeat = volume_heartbeat[:, 0]
