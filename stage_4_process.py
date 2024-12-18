@@ -1,3 +1,5 @@
+#%%
+
 import numpy as np
 import torch
 import torchvision as tv  # type: ignore
@@ -568,84 +570,88 @@ def process_trial(
         data -= heartbeat_coefficients.unsqueeze(1) * volume_heartbeat.unsqueeze(
             0
         ).movedim(-1, 1)
+        # data_herzlos = data.clone()
         mylogger.info("-==- Done -==-")
 
-        donor_heartbeat_factor = heartbeat_coefficients[donor_index, ...].clone()
-        acceptor_heartbeat_factor = heartbeat_coefficients[acceptor_index, ...].clone()
-        del heartbeat_coefficients
+        if config["gevi"]:  # UDO scaling performed!
+            donor_heartbeat_factor = heartbeat_coefficients[donor_index, ...].clone()
+            acceptor_heartbeat_factor = heartbeat_coefficients[acceptor_index, ...].clone()
+            del heartbeat_coefficients
 
-        if device != torch.device("cpu"):
-            torch.cuda.empty_cache()
-            mylogger.info("Empty CUDA cache")
-            free_mem = cuda_total_memory - max(
-                [
-                    torch.cuda.memory_reserved(device),
-                    torch.cuda.memory_allocated(device),
-                ]
-            )
-            mylogger.info(f"CUDA memory: {free_mem // 1024} MByte")
+            if device != torch.device("cpu"):
+                torch.cuda.empty_cache()
+                mylogger.info("Empty CUDA cache")
+                free_mem = cuda_total_memory - max(
+                    [
+                        torch.cuda.memory_reserved(device),
+                        torch.cuda.memory_allocated(device),
+                    ]
+                )
+                mylogger.info(f"CUDA memory: {free_mem // 1024} MByte")
 
-        mylogger.info("Calculate scaling factor for donor and acceptor")
-        donor_factor: torch.Tensor = (
-            donor_heartbeat_factor + acceptor_heartbeat_factor
-        ) / (2 * donor_heartbeat_factor)
-        acceptor_factor: torch.Tensor = (
-            donor_heartbeat_factor + acceptor_heartbeat_factor
-        ) / (2 * acceptor_heartbeat_factor)
+            mylogger.info("Calculate scaling factor for donor and acceptor")
+            donor_factor: torch.Tensor = (
+                donor_heartbeat_factor + acceptor_heartbeat_factor
+            ) / (2 * donor_heartbeat_factor)
+            acceptor_factor: torch.Tensor = (
+                donor_heartbeat_factor + acceptor_heartbeat_factor
+            ) / (2 * acceptor_heartbeat_factor)
 
-        del donor_heartbeat_factor
-        del acceptor_heartbeat_factor
+            del donor_heartbeat_factor
+            del acceptor_heartbeat_factor
 
-        if config["save_factors"]:
-            temp_path = os.path.join(
-                config["export_path"], experiment_name + "_donor_factor.npy"
-            )
-            mylogger.info(f"Save donor factor to {temp_path}")
-            np.save(temp_path, donor_factor.cpu())
+            if config["save_factors"]:
+                temp_path = os.path.join(
+                    config["export_path"], experiment_name + "_donor_factor.npy"
+                )
+                mylogger.info(f"Save donor factor to {temp_path}")
+                np.save(temp_path, donor_factor.cpu())
 
-            temp_path = os.path.join(
-                config["export_path"], experiment_name + "_acceptor_factor.npy"
-            )
-            mylogger.info(f"Save acceptor factor to {temp_path}")
-            np.save(temp_path, acceptor_factor.cpu())
-        mylogger.info("-==- Done -==-")
+                temp_path = os.path.join(
+                    config["export_path"], experiment_name + "_acceptor_factor.npy"
+                )
+                mylogger.info(f"Save acceptor factor to {temp_path}")
+                np.save(temp_path, acceptor_factor.cpu())
+            mylogger.info("-==- Done -==-")
 
-        mylogger.info("Scale acceptor to heart beat amplitude")
-        mylogger.info("Calculate mean")
-        mean_values_acceptor = data[
-            acceptor_index, config["skip_frames_in_the_beginning"] :, ...
-        ].nanmean(dim=0, keepdim=True)
+            mylogger.info("Scale acceptor to heart beat amplitude")
+            mylogger.info("Calculate mean")
+            mean_values_acceptor = data[
+                acceptor_index, config["skip_frames_in_the_beginning"] :, ...
+            ].nanmean(dim=0, keepdim=True)
 
-        mylogger.info("Remove mean")
-        data[acceptor_index, ...] -= mean_values_acceptor
-        mylogger.info("Apply acceptor_factor and mask")
-        data[acceptor_index, ...] *= acceptor_factor.unsqueeze(
-            0
-        ) * mask_positve.unsqueeze(0)
-        mylogger.info("Add mean")
-        data[acceptor_index, ...] += mean_values_acceptor
-        mylogger.info("-==- Done -==-")
+            mylogger.info("Remove mean")
+            data[acceptor_index, ...] -= mean_values_acceptor
+            mylogger.info("Apply acceptor_factor and mask")
+            data[acceptor_index, ...] *= acceptor_factor.unsqueeze(
+                0
+            ) * mask_positve.unsqueeze(0)
+            mylogger.info("Add mean")
+            data[acceptor_index, ...] += mean_values_acceptor
+            mylogger.info("-==- Done -==-")
 
-        mylogger.info("Scale donor to heart beat amplitude")
-        mylogger.info("Calculate mean")
-        mean_values_donor = data[
-            donor_index, config["skip_frames_in_the_beginning"] :, ...
-        ].nanmean(dim=0, keepdim=True)
-        mylogger.info("Remove mean")
-        data[donor_index, ...] -= mean_values_donor
-        mylogger.info("Apply donor_factor and mask")
-        data[donor_index, ...] *= donor_factor.unsqueeze(0) * mask_positve.unsqueeze(0)
-        mylogger.info("Add mean")
-        data[donor_index, ...] += mean_values_donor
-        mylogger.info("-==- Done -==-")
+            mylogger.info("Scale donor to heart beat amplitude")
+            mylogger.info("Calculate mean")
+            mean_values_donor = data[
+                donor_index, config["skip_frames_in_the_beginning"] :, ...
+            ].nanmean(dim=0, keepdim=True)
+            mylogger.info("Remove mean")
+            data[donor_index, ...] -= mean_values_donor
+            mylogger.info("Apply donor_factor and mask")
+            data[donor_index, ...] *= donor_factor.unsqueeze(0) * mask_positve.unsqueeze(0)
+            mylogger.info("Add mean")
+            data[donor_index, ...] += mean_values_donor
+            mylogger.info("-==- Done -==-")
+        else:
+            mylogger.info("GECI does not require acceptor/donor scaling, skipping!")
+            mylogger.info("-==- Done -==-")
 
-        mylogger.info("Divide by mean over time")
-        data /= data[:, config["skip_frames_in_the_beginning"] :, ...].nanmean(
-            dim=1,
-            keepdim=True,
-        )
-
-        mylogger.info("-==- Done -==-")
+    mylogger.info("Divide by mean over time")
+    data /= data[:, config["skip_frames_in_the_beginning"] :, ...].nanmean(
+        dim=1,
+        keepdim=True,
+    )
+    mylogger.info("-==- Done -==-")
 
     data = data.nan_to_num(nan=0.0)
     mylogger.info("Preparation for regression -- Gauss smear")

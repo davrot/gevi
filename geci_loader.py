@@ -18,7 +18,7 @@ def func_exp(x, a, b, c):
 
 def loader(
     filename: str = "config_M_Sert_Cre_49.json",
-    fpath: str = "/data_1/hendrik/gevi",
+    fpath: str|None = None,
     skip_timesteps: int = 100,
     # If there is no special ROI... Get one! This is just a backup
     roi_control_path_default: str = "roi_controlM_Sert_Cre_49.npy",
@@ -26,6 +26,9 @@ def loader(
     remove_fit: bool = True,
     fit_power: bool = False,  # True => -ax^b ; False => exp(-b)
 ) -> None:
+
+    if fpath is None:
+        fpath = os.getcwd()
 
     if os.path.isfile(filename) is False:
         print(f"{filename} is missing")
@@ -42,8 +45,8 @@ def loader(
     )
 
     if remove_fit:
-        roi_control_path: str = f"roi_control{config["mouse_identifier"]}.npy"
-        roi_sdarken_path: str = f"roi_sdarken{config["mouse_identifier"]}.npy"
+        roi_control_path: str = f"roi_control{config['mouse_identifier']}.npy"
+        roi_sdarken_path: str = f"roi_sdarken{config['mouse_identifier']}.npy"
 
         if os.path.isfile(roi_control_path) is False:
             print(f"Using replacement RIO: {roi_control_path_default}")
@@ -72,7 +75,7 @@ def loader(
             )
             tmp_fname = os.path.join(
                 fpath,
-                "output_" + config["mouse_identifier"],
+                config["export_path"],
                 experiment_name + "_acceptor_donor.npz",
             )
             print(f'Processing file "{tmp_fname}"...')
@@ -156,9 +159,9 @@ def loader(
             light_signal[i_exp] += tmp_light_signal
         data_sequence[i_exp] /= n_tri
         light_signal[i_exp] /= n_tri
-    np.save("dsq_" + config["mouse_identifier"], data_sequence)
-    np.save("lsq_" + config["mouse_identifier"], light_signal)
-    np.save("msq_" + config["mouse_identifier"], mask)
+    np.save(os.path.join(fpath, config["export_path"], "dsq_" + config["mouse_identifier"]), data_sequence)
+    np.save(os.path.join(fpath, config["export_path"], "lsq_" + config["mouse_identifier"]), light_signal)
+    np.save(os.path.join(fpath, config["export_path"], "msq_" + config["mouse_identifier"]), mask)
 
 
 if __name__ == "__main__":

@@ -1,3 +1,5 @@
+# %%
+
 import numpy as np
 import matplotlib.pyplot as plt
 import argh
@@ -18,14 +20,15 @@ def func_exp(x, a, b, c):
 # mouse: int = 0, 1, 2, 3, 4
 def plot(
     filename: str = "config_M_Sert_Cre_49.json",
+    fpath: str | None = None,
     experiment: int = 4,
     skip_timesteps: int = 100,
-    # If there is no special ROI... Get one! This is just a backup
-    roi_control_path_default: str = "roi_controlM_Sert_Cre_49.npy",
-    roi_sdarken_path_default: str = "roi_sdarkenM_Sert_Cre_49.npy",
     remove_fit: bool = False,
     fit_power: bool = False,  # True => -ax^b ; False => exp(-b)
 ) -> None:
+
+    if fpath is None:
+        fpath = os.getcwd()
 
     if os.path.isfile(filename) is False:
         print(f"{filename} is missing")
@@ -45,30 +48,25 @@ def plot(
         print(f"ERROR: could not find raw directory {raw_data_path}!!!!")
         exit()
 
-    with open(f"meta_{config["mouse_identifier"]}_exp{experiment:03d}.json", "r") as file:
+    with open(f"meta_{config['mouse_identifier']}_exp{experiment:03d}.json", "r") as file:
         metadata = json.loads(jsmin(file.read()))
 
     experiment_names = metadata['sessionMetaData']['experimentNames'][str(experiment)]
 
-    roi_control_path: str = f"roi_control{config["mouse_identifier"]}.npy"
-    roi_sdarken_path: str = f"roi_sdarken{config["mouse_identifier"]}.npy"
+    roi_control_path: str = f"roi_control{config['mouse_identifier']}.npy"
+    roi_sdarken_path: str = f"roi_sdarken{config['mouse_identifier']}.npy"
 
-    if os.path.isfile(roi_control_path) is False:
-        print(f"Using replacement RIO: {roi_control_path_default}")
-        roi_control_path = roi_control_path_default
-
-    if os.path.isfile(roi_sdarken_path) is False:
-        print(f"Using replacement RIO: {roi_sdarken_path_default}")
-        roi_sdarken_path = roi_sdarken_path_default
+    assert os.path.isfile(roi_control_path)
+    assert os.path.isfile(roi_sdarken_path)
 
     print("Load data...")
-    data = np.load("dsq_" + config["mouse_identifier"] + ".npy", mmap_mode="r")
+    data = np.load(os.path.join(fpath, config["export_path"], "dsq_" + config["mouse_identifier"] + ".npy"), mmap_mode="r")
 
     print("Load light signal...")
-    light = np.load("lsq_" + config["mouse_identifier"] + ".npy", mmap_mode="r")
+    light = np.load(os.path.join(fpath, config["export_path"], "lsq_" + config["mouse_identifier"] + ".npy"), mmap_mode="r")
 
     print("Load mask...")
-    mask = np.load("msq_" + config["mouse_identifier"] + ".npy")
+    mask = np.load(os.path.join(fpath, config["export_path"], "msq_" + config["mouse_identifier"] + ".npy"))
 
     roi_control = np.load(roi_control_path)
     roi_control *= mask
@@ -82,14 +80,14 @@ def plot(
     a_show = data[experiment - 1, :, :, 1000].copy()
     a_show[(roi_darken + roi_control) < 0.5] = np.nan
     plt.imshow(a_show)
-    plt.title(f"{config["mouse_identifier"]} -- Experiment: {experiment}")
+    plt.title(f"{config['mouse_identifier']} -- Experiment: {experiment}")
     plt.show(block=False)
 
     plt.figure(2)
     a_dontshow = data[experiment - 1, :, :, 1000].copy()
     a_dontshow[(roi_darken + roi_control) > 0.5] = np.nan
     plt.imshow(a_dontshow)
-    plt.title(f"{config["mouse_identifier"]} -- Experiment: {experiment}")
+    plt.title(f"{config['mouse_identifier']} -- Experiment: {experiment}")
     plt.show(block=False)
 
     plt.figure(3)
@@ -174,7 +172,7 @@ def plot(
     plt.plot(time_axis, light_signal, c="k", label="light")
     plt.plot(time_axis, darken, label="sDarken")
     plt.plot(time_axis, lighten, label="control")
-    plt.title(f"{config["mouse_identifier"]} -- Experiment: {experiment} ({experiment_names})")
+    plt.title(f"{config['mouse_identifier']} -- Experiment: {experiment} ({experiment_names})")
     plt.legend()
     plt.show()
 
