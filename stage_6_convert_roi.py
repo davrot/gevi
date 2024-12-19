@@ -6,7 +6,9 @@ import numpy as np
 import h5py
 
 
-def converter(filename: str = "config_M_Sert_Cre_49.json") -> None:
+def converter(config_filename: str = "config.json") -> None:
+
+    filename: str = config_filename
 
     if os.path.isfile(filename) is False:
         print(f"{filename} is missing")
