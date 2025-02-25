@@ -137,7 +137,7 @@ def main(*, config_filename: str = "config.json") -> None:
         valmin=0,
         valmax=value_sort_max,
         valinit=threshold,
-        valstep=value_sort_max / 100.0,
+        valstep=value_sort_max / 1000.0,
     )
     axbutton_accept = fig.add_axes(rect=(0.3, 0.85, 0.2, 0.04))
     button_accept = Button(
