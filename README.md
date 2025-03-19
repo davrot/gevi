@@ -17,7 +17,7 @@ Ruhr-Universität Bochum, Universitätsbibliothek
 Updated: 19.03.2025
 
 Files are now organized in subdirectories to distinguish better between code for GEVI or GECI analysis.
-
+```
 gevi-geci/
     stage_1*, stage_2*, stage_3*, stage_4*, stage_5*
 	-> main stages for data preprocessing
@@ -48,7 +48,7 @@ gevi-geci/geci/
 gevi-geci/other/
     stage_4b_inspect.py, stage_4c_viewer.py
 	-> temporary code for assisting search for implantation electrode
-	
+```	
 
     
 
