@@ -1,0 +1,67 @@
+{
+    "basic_path": "/data_1/fatma/GEVI/",
+    "recoding_data": "2024-11-13",
+    "mouse_identifier": "M0134M_SessionA",
+    "raw_path": "raw",
+    "export_path": "output/M0134M_2024-11-13_SessionA",
+    "ref_image_path": "ref_images/M0134M_2024-11-13_SessionA",
+	"raw_path": "raw",
+	"heartbeat_remove": true,
+	"gevi": true, // true => gevi, false => geci
+    // Ratio Sequence
+    "classical_ratio_mode": true, // true: a/d false: 1+a-d
+    // Regression
+    "target_camera_acceptor": "acceptor",
+    "regressor_cameras_acceptor": [
+        "oxygenation",
+        "volume"
+    ],
+    "target_camera_donor": "donor",
+    "regressor_cameras_donor": [
+        "oxygenation",
+        "volume"
+    ],
+    // binning
+    "binning_enable": true,
+    "binning_at_the_end": false,
+    "binning_kernel_size": 4,
+    "binning_stride": 4,
+    "binning_divisor_override": 1,
+    // alignment
+    "alignment_batch_size": 200,
+    "rotation_stabilization_threshold_factor": 3.0, // >= 1.0
+    "rotation_stabilization_threshold_border": 0.9, // <= 1.0
+    // Heart beat detection
+    "lower_freqency_bandpass": 5.0, // Hz
+    "upper_freqency_bandpass": 14.0, // Hz
+    "heartbeat_filtfilt_chuck_size": 10,
+    // Gauss smear 
+    "gauss_smear_spatial_width": 8,
+    "gauss_smear_temporal_width": 0.1,
+    "gauss_smear_use_matlab_mask": false,
+    // LED Ramp on
+    "skip_frames_in_the_beginning": 100, // Frames
+    // PyTorch
+    "dtype": "float32",
+    "force_to_cpu": false,
+    // Save
+    "save_as_python": true, // produces .npz files (compressed)
+    "save_as_matlab": false, // produces .hd5 file (compressed)
+    // Save extra information
+    "save_alignment": false,
+    "save_heartbeat": false,
+    "save_factors": false,
+    "save_regression_coefficients": false,
+	"save_aligned_as_python": false,
+	"save_aligned_as_matlab": false,
+	"save_oxyvol_as_python": false,
+	"save_oxyvol_as_matlab": false,
+    "save_gevi_with_donor_acceptor": true,
+    // Not important parameter
+    "required_order": [
+        "acceptor",
+        "donor",
+        "oxygenation",
+        "volume"
+    ]
+}
