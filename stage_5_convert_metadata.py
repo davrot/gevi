@@ -6,13 +6,13 @@ from functions.get_trials import get_trials
 from functions.get_experiments import get_experiments
 
 
-def converter(filename: str = "config_M_Sert_Cre_49.json") -> None:
+def converter(config_filename: str = "config_M_Sert_Cre_49.json") -> None:
 
-    if os.path.isfile(filename) is False:
-        print(f"{filename} is missing")
+    if os.path.isfile(config_filename) is False:
+        print(f"{config_filename} is missing")
         exit()
 
-    with open(filename, "r") as file:
+    with open(config_filename, "r") as file:
         config = json.loads(jsmin(file.read()))
 
     raw_data_path: str = os.path.join(
